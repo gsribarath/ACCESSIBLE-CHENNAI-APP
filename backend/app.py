@@ -8,6 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from google.oauth2 import id_token
 from google_auth_oauthlib.flow import Flow
+from google.auth.transport import requests as google_requests
 import pathlib
 import requests as ext_requests
 
@@ -73,53 +74,95 @@ def create_app():
     # GOOGLE OAUTH ENDPOINTS
     @app.route('/api/google-auth/login')
     def google_login():
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": GOOGLE_CLIENT_ID,
-                    "client_secret": GOOGLE_CLIENT_SECRET,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                }
-            },
-            scopes=["openid", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"],
-            redirect_uri=url_for('google_callback', _external=True)
-        )
-        authorization_url, state = flow.authorization_url(prompt='consent', access_type='offline', include_granted_scopes='true')
-        session['state'] = state
-        return redirect(authorization_url)
+        try:
+            if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+                return jsonify({'error': 'Google OAuth not configured'}), 500
+            
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": GOOGLE_CLIENT_ID,
+                        "client_secret": GOOGLE_CLIENT_SECRET,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": [request.host_url + "api/google-auth/callback"]
+                    }
+                },
+                scopes=["openid", "email", "profile"],
+                redirect_uri=request.host_url + "api/google-auth/callback"
+            )
+            authorization_url, state = flow.authorization_url(
+                prompt='consent',
+                access_type='offline',
+                include_granted_scopes='true'
+            )
+            session['state'] = state
+            return redirect(authorization_url)
+        except Exception as e:
+            print(f"Google login error: {e}")
+            return redirect(f'http://localhost:3000/login?error=google_auth_failed')
 
     @app.route('/api/google-auth/callback')
     def google_callback():
-        flow = Flow.from_client_config(
-            {
-                "web": {
-                    "client_id": GOOGLE_CLIENT_ID,
-                    "client_secret": GOOGLE_CLIENT_SECRET,
-                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                    "token_uri": "https://oauth2.googleapis.com/token",
-                }
-            },
-            scopes=["openid", "https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"],
-            redirect_uri=url_for('google_callback', _external=True)
-        )
-        flow.fetch_token(authorization_response=request.url)
-        credentials = flow.credentials
-        request_session = ext_requests.Session()
-        token_request = ext_requests.Request()
-        id_info = id_token.verify_oauth2_token(
-            credentials._id_token,
-            token_request,
-            GOOGLE_CLIENT_ID
-        )
-        # Save or update user in DB
-        user = User.query.filter_by(email=id_info['email']).first()
-        if not user:
-            user = User(email=id_info['email'], google_id=id_info['sub'], preferences={}, saved_places=[])
-            db.session.add(user)
+        try:
+            if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+                return redirect(f'http://localhost:3000/login?error=google_not_configured')
+            
+            flow = Flow.from_client_config(
+                {
+                    "web": {
+                        "client_id": GOOGLE_CLIENT_ID,
+                        "client_secret": GOOGLE_CLIENT_SECRET,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                        "redirect_uris": [request.host_url + "api/google-auth/callback"]
+                    }
+                },
+                scopes=["openid", "email", "profile"],
+                redirect_uri=request.host_url + "api/google-auth/callback"
+            )
+            
+            flow.fetch_token(authorization_response=request.url)
+            credentials = flow.credentials
+            
+            # Verify the token
+            id_info = id_token.verify_oauth2_token(
+                credentials._id_token,
+                google_requests.Request(),
+                GOOGLE_CLIENT_ID
+            )
+            
+            # Extract user info
+            google_id = id_info.get('sub')
+            email = id_info.get('email')
+            name = id_info.get('name', '')
+            
+            if not email:
+                return redirect(f'http://localhost:3000/login?error=no_email_from_google')
+            
+            # Check if user exists or create new user
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User(
+                    email=email, 
+                    google_id=google_id, 
+                    preferences={}, 
+                    saved_places=[]
+                )
+                db.session.add(user)
+            else:
+                # Update Google ID if not set
+                if not user.google_id:
+                    user.google_id = google_id
+            
             db.session.commit()
-        # Redirect to /login with params so frontend can handle login state
-        return redirect(f'http://localhost:3000/login?google_success=1&user_id={user.id}')
+            
+            # Redirect to frontend with success
+            return redirect(f'http://localhost:3000/login?google_success=1&user_id={user.id}&email={email}')
+            
+        except Exception as e:
+            print(f"Google callback error: {e}")
+            return redirect(f'http://localhost:3000/login?error=google_callback_failed')
     CORS(app)
     db.init_app(app)
     login_manager = LoginManager()
