@@ -1,0 +1,302 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Navigation from '../components/Navigation';
+// Icons have been removed
+
+function Home() {
+  const [user, setUser] = useState(null);
+  const [greeting, setGreeting] = useState('');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userData = localStorage.getItem('ac_user');
+    const prefs = localStorage.getItem('ac_prefs');
+    
+    if (!userData) {
+      // Show onboarding if no user data and no preferences
+      if (!prefs) {
+        setShowOnboarding(true);
+      } else {
+        navigate('/login');
+      }
+    } else {
+      setUser(JSON.parse(userData));
+    }
+
+    // Set greeting based on time
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting('Good Morning');
+    else if (hour < 18) setGreeting('Good Afternoon');
+    else setGreeting('Good Evening');
+  }, [navigate]);
+
+  const handleOnboardingComplete = () => {
+    setShowOnboarding(false);
+    navigate('/login');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('ac_user');
+    navigate('/login');
+  };
+
+  const quickActions = [
+    { title: 'Navigate', desc: 'Find accessible routes', path: '/navigate' },
+    { title: 'Alerts', desc: 'Real-time updates', path: '/alerts' },
+    { title: 'Community', desc: 'Connect & share', path: '/community' },
+    { title: 'Settings', desc: 'Preferences', path: '/settings' }
+  ];
+
+  const recentAlerts = [
+    { id: 1, type: 'Service', msg: 'Metro service delayed on Blue Line', time: '10 min ago' },
+    { id: 2, type: 'Accessibility', msg: 'Lift maintenance at Central Station', time: '25 min ago' },
+    { id: 3, type: 'Weather', msg: 'Heavy rain expected - plan accordingly', time: '1 hour ago' }
+  ];
+
+  // Show onboarding for first-time users
+  if (showOnboarding) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{
+            width: 120,
+            height: 120,
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            boxShadow: '0 8px 32px rgba(25, 118, 210, 0.3)'
+          }}>
+            <span style={{ 
+              fontSize: 40, 
+              color: '#fff',
+              fontWeight: 'bold'
+            }}>
+              AC
+            </span>
+          </div>
+          <h1 style={{ fontSize: 36, marginBottom: 8, color: '#1976d2', fontWeight: 700 }}>Accessible Chennai</h1>
+          <p style={{ fontSize: 16, color: '#666', margin: 0 }}>Your inclusive navigation companion</p>
+        </div>
+        
+        <div style={{ maxWidth: 400, padding: 32, borderRadius: 16, background: '#fff', boxShadow: '0 8px 32px rgba(0,0,0,0.1)' }}>
+          <h2 style={{ marginBottom: 16, color: '#333', fontSize: 24 }}>Welcome!</h2>
+          <p style={{ fontSize: 16, lineHeight: 1.6, color: '#666', marginBottom: 24 }}>
+            Navigate Chennai's public transport with confidence. We provide accessibility-first routes, real-time alerts, and community support for everyone.
+          </p>
+          <button 
+            onClick={handleOnboardingComplete} 
+            style={{ 
+              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: 12, 
+              padding: '16px 32px', 
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: 'pointer',
+              width: '100%',
+              boxShadow: '0 4px 16px rgba(25, 118, 210, 0.3)',
+              transition: 'all 0.2s'
+            }}
+            onMouseOver={e => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 6px 20px rgba(25, 118, 210, 0.4)';
+            }}
+            onMouseOut={e => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 16px rgba(25, 118, 210, 0.3)';
+            }}
+          >
+            Get Started
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (!user) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: 18 }}>
+        Loading...
+      </div>
+    );
+  }
+
+  // Main home page for logged-in users
+  return (
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', paddingBottom: 80 }}>
+      <Navigation user={user} onLogout={handleLogout} />
+
+      {/* Main Content */}
+      <main style={{ padding: '20px', maxWidth: 1200, margin: '0 auto' }}>
+        {/* Welcome Section */}
+        <section style={{ 
+          background: '#fff', 
+          padding: 24, 
+          borderRadius: 16, 
+          marginBottom: 20,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(255,255,255,0.2)'
+        }}>
+          <h2 style={{ margin: '0 0 8px 0', color: '#333', fontSize: 28, fontWeight: 600 }}>{greeting}!</h2>
+          <p style={{ margin: 0, color: '#666', fontSize: 16, lineHeight: 1.5 }}>
+            Welcome to your accessibility-first navigation companion for Chennai
+          </p>
+        </section>
+
+        {/* Quick Actions Grid */}
+        <section style={{ marginBottom: 24 }}>
+          <h3 style={{ marginBottom: 16, color: '#333', fontSize: 20, fontWeight: 600 }}>Quick Actions</h3>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+            gap: 16 
+          }}>
+            {quickActions.map(action => (
+              <div
+                key={action.title}
+                onClick={() => navigate(action.path)}
+                style={{
+                  background: '#fff',
+                  padding: 24,
+                  borderRadius: 16,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  transition: 'all 0.3s ease',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px rgba(25, 118, 210, 0.15)';
+                  e.currentTarget.style.borderColor = '#1976d2';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                }}
+              >
+                <div style={{ fontSize: 24, marginBottom: 16, opacity: 0.9, color: '#1976d2', fontWeight: 'bold' }}>
+                  {action.title[0]}
+                </div>
+                <h4 style={{ margin: '0 0 8px 0', color: '#333', fontSize: 18, fontWeight: 600 }}>{action.title}</h4>
+                <p style={{ margin: 0, color: '#666', fontSize: 14, lineHeight: 1.4 }}>{action.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Recent Alerts */}
+        <section style={{ 
+          background: '#fff', 
+          padding: 24, 
+          borderRadius: 16,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          marginBottom: 24
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <h3 style={{ margin: 0, color: '#333', fontSize: 20, fontWeight: 600 }}>Recent Alerts</h3>
+            <button 
+              onClick={() => navigate('/alerts')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#1976d2',
+                cursor: 'pointer',
+                fontSize: 14,
+                fontWeight: 500,
+                padding: '8px 12px',
+                borderRadius: 8,
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => e.target.style.background = '#e3f2fd'}
+              onMouseOut={e => e.target.style.background = 'none'}
+            >
+              View All →
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {recentAlerts.map(alert => (
+              <div 
+                key={alert.id}
+                style={{
+                  padding: 20,
+                  background: '#f8f9fa',
+                  borderRadius: 12,
+                  borderLeft: '4px solid #1976d2',
+                  transition: 'all 0.2s'
+                }}
+                onMouseOver={e => e.target.style.background = '#e3f2fd'}
+                onMouseOut={e => e.target.style.background = '#f8f9fa'}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <span style={{ 
+                      background: '#1976d2', 
+                      color: '#fff', 
+                      padding: '4px 12px', 
+                      borderRadius: 20, 
+                      fontSize: 12,
+                      fontWeight: 600
+                    }}>
+                      {alert.type}
+                    </span>
+                    <p style={{ margin: '12px 0 0 0', color: '#333', fontSize: 15, lineHeight: 1.4 }}>{alert.msg}</p>
+                  </div>
+                  <span style={{ fontSize: 12, color: '#666', fontWeight: 500 }}>{alert.time}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Emergency Contact */}
+        <section style={{ 
+          background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)', 
+          color: '#fff',
+          padding: 24, 
+          borderRadius: 16,
+          textAlign: 'center',
+          boxShadow: '0 4px 20px rgba(238, 90, 36, 0.3)'
+        }}>
+          <h4 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 600 }}>Emergency Assistance</h4>
+          <p style={{ margin: '0 0 16px 0', fontSize: 14, opacity: 0.9 }}>Need immediate help with accessibility?</p>
+          <button 
+            style={{
+              background: '#fff',
+              color: '#ee5a24',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: 8,
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontSize: 16,
+              transition: 'all 0.2s'
+            }}
+            onClick={() => window.location.href = 'tel:1077'}
+            onMouseOver={e => {
+              e.target.style.transform = 'scale(1.05)';
+              e.target.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
+            }}
+            onMouseOut={e => {
+              e.target.style.transform = 'scale(1)';
+              e.target.style.boxShadow = 'none';
+            }}
+          >
+            Call 1077
+          </button>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default Home;

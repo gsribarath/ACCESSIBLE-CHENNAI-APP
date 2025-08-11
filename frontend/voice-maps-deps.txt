@@ -1,0 +1,9 @@
+// Add this to your frontend dependencies for voice and maps features
+{
+  "dependencies": {
+    "react-speech-recognition": "^3.10.0",
+    "react-speech-kit": "^3.7.0",
+    "@react-google-maps/api": "^2.19.1"
+  }
+}
+// Run: npm install react-speech-recognition react-speech-kit @react-google-maps/api
