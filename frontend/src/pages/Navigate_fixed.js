@@ -213,8 +213,8 @@ const Navigate = () => {
           center={{ lat: 13.0827, lng: 80.2707 }}
           zoom={15}
           routes={[route]}
-          fromLocation={route.from || fromLocation || 'Start'}
-          toLocation={route.to || toLocation || 'Destination'}
+          fromLocation={{ name: route.from || 'Start' }}
+          toLocation={{ name: route.to || 'Destination' }}
           accessibilityMarkers={route.accessibilityFeatures || []}
         />
 
@@ -242,20 +242,25 @@ const Navigate = () => {
             </div>
             
             <div style={{ flex: 1 }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: 16, 
+                fontWeight: 600,
+                ...getTextStyles('primary')
+              }}>
+                Step {currentStep + 1} of {route.steps?.length || 0}
+              </h3>
               {isNavigating && (
-                <div
-                  style={{
-                    borderRadius: 12,
-                    fontSize: 11,
-                    fontWeight: 600,
-                    marginTop: 4,
-                    display: 'inline-block',
-                    background: '#007bff',
-                    color: 'white',
-                    padding: '2px 10px',
-                    letterSpacing: '1px',
-                  }}
-                >
+                <div style={{
+                  background: '#4caf50',
+                  color: 'white',
+                  padding: '2px 8px',
+                  borderRadius: 12,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  marginTop: 4,
+                  display: 'inline-block'
+                }}>
                   NAVIGATING
                 </div>
               )}
@@ -512,17 +517,16 @@ const Navigate = () => {
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       position: 'absolute',
-                      top: 'calc(100% + 4px)',
+                      top: '100%',
                       left: 0,
                       right: 0,
                       backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
                       border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
                       borderRadius: '8px',
-                      boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
-                      zIndex: 9999,
-                      maxHeight: '240px',
-                      overflowY: 'auto',
-                      marginTop: '2px'
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                      zIndex: 1000,
+                      maxHeight: '200px',
+                      overflowY: 'auto'
                     }}
                   >
                     {suggestions.from.map((suggestion, index) => (
@@ -535,35 +539,21 @@ const Navigate = () => {
                           setActiveInput(null);
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f0f0f0';
+                          e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f5f5f5';
                         }}
                         onMouseLeave={(e) => {
                           e.target.style.backgroundColor = 'transparent';
                         }}
                         style={{
-                          padding: '14px 16px',
+                          padding: '12px',
                           cursor: 'pointer',
                           borderBottom: index < suggestions.from.length - 1 
-                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e8e8e8'}` 
+                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}` 
                             : 'none',
-                          color: preferences.theme === 'dark' ? '#ffffff' : '#333333',
-                          backgroundColor: 'transparent',
-                          fontSize: '14px',
-                          fontFamily: 'var(--font-ui)',
-                          transition: 'background-color 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
+                          color: preferences.theme === 'dark' ? '#ffffff' : '#000000',
+                          backgroundColor: 'transparent'
                         }}
                       >
-                        <FontAwesomeIcon 
-                          icon={faMapMarkerAlt} 
-                          style={{ 
-                            color: preferences.theme === 'dark' ? '#888' : '#666',
-                            fontSize: '12px',
-                            minWidth: '12px'
-                          }} 
-                        />
                         {suggestion}
                       </div>
                     ))}
@@ -628,17 +618,16 @@ const Navigate = () => {
                     onClick={(e) => e.stopPropagation()}
                     style={{
                       position: 'absolute',
-                      top: 'calc(100% + 4px)',
+                      top: '100%',
                       left: 0,
                       right: 0,
                       backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
                       border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
                       borderRadius: '8px',
-                      boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
-                      zIndex: 9999,
-                      maxHeight: '240px',
-                      overflowY: 'auto',
-                      marginTop: '2px'
+                      boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+                      zIndex: 1000,
+                      maxHeight: '200px',
+                      overflowY: 'auto'
                     }}
                   >
                     {suggestions.to.map((suggestion, index) => (
@@ -651,35 +640,21 @@ const Navigate = () => {
                           setActiveInput(null);
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f0f0f0';
+                          e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f5f5f5';
                         }}
                         onMouseLeave={(e) => {
                           e.target.style.backgroundColor = 'transparent';
                         }}
                         style={{
-                          padding: '14px 16px',
+                          padding: '12px',
                           cursor: 'pointer',
                           borderBottom: index < suggestions.to.length - 1 
-                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e8e8e8'}` 
+                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}` 
                             : 'none',
-                          color: preferences.theme === 'dark' ? '#ffffff' : '#333333',
-                          backgroundColor: 'transparent',
-                          fontSize: '14px',
-                          fontFamily: 'var(--font-ui)',
-                          transition: 'background-color 0.2s ease',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px'
+                          color: preferences.theme === 'dark' ? '#ffffff' : '#000000',
+                          backgroundColor: 'transparent'
                         }}
                       >
-                        <FontAwesomeIcon 
-                          icon={faMapMarkerAlt} 
-                          style={{ 
-                            color: preferences.theme === 'dark' ? '#888' : '#666',
-                            fontSize: '12px',
-                            minWidth: '12px'
-                          }} 
-                        />
                         {suggestion}
                       </div>
                     ))}
@@ -724,12 +699,12 @@ const Navigate = () => {
         </section>
 
         {/* Route Map */}
-        {(selectedRoute || (fromLocation && toLocation)) && <Map 
+        {selectedRoute && <Map 
           center={{ lat: 13.0827, lng: 80.2707 }}
           zoom={12}
-          routes={selectedRoute ? [selectedRoute] : []}
-          fromLocation={fromLocation}
-          toLocation={toLocation}
+          routes={[selectedRoute]}
+          fromLocation={{ name: fromLocation }}
+          toLocation={{ name: toLocation }}
           accessibilityMarkers={[]}
         />}
 
