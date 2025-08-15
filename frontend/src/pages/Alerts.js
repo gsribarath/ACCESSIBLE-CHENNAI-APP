@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
 // Icons have been removed
 
@@ -12,6 +13,8 @@ function Alerts() {
   const [metroAlerts, setMetroAlerts] = useState([]);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
 
   // Chennai Metro Lines and Stations
   const metroLines = {
@@ -175,27 +178,44 @@ function Alerts() {
     return 'Just now';
   };
 
-  if (!user) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+  if (!user) return (
+    <div style={{ 
+      display: 'flex', 
+      justifyContent: 'center', 
+      alignItems: 'center', 
+      height: '100vh',
+      ...getThemeStyles()
+    }}>
+      <span style={getTextStyles('primary')}>{getText('loading')}</span>
+    </div>
+  );
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', paddingBottom: 80 }}>
+    <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
       <Navigation user={user} onLogout={handleLogout} />
 
       <main style={{ padding: '20px', maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
         <section style={{ 
-          background: '#fff', 
+          ...getCardStyles(),
           padding: 24, 
           borderRadius: 16, 
-          marginBottom: 24,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          border: '1px solid rgba(255,255,255,0.2)'
+          marginBottom: 24
         }}>
-          <h1 style={{ margin: '0 0 8px 0', color: '#333', fontSize: 28, fontWeight: 600 }}>
-            Real-Time Alerts
+          <h1 style={{ 
+            margin: '0 0 8px 0', 
+            fontSize: 28, 
+            fontWeight: 600,
+            ...getTextStyles('primary')
+          }}>
+            {getText('realTimeAlerts')}
           </h1>
-          <p style={{ margin: 0, color: '#666', fontSize: 16 }}>
-            Stay updated with live transport and accessibility alerts across Chennai
+          <p style={{ 
+            margin: 0, 
+            fontSize: 16,
+            ...getTextStyles('secondary')
+          }}>
+            {getText('stayUpdated')}
           </p>
         </section>
 
@@ -308,22 +328,31 @@ function Alerts() {
 
         {/* Post Alert Form */}
         <section style={{ 
-          background: '#fff', 
+          ...getCardStyles(),
           padding: 24, 
           borderRadius: 16, 
-          marginBottom: 24,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          border: '1px solid rgba(255,255,255,0.2)'
+          marginBottom: 24
         }}>
-          <h3 style={{ margin: '0 0 20px 0', color: '#333', fontSize: 18, fontWeight: 600 }}>
-            Report an Issue
+          <h3 style={{ 
+            margin: '0 0 20px 0', 
+            fontSize: 18, 
+            fontWeight: 600,
+            ...getTextStyles('primary')
+          }}>
+            {getText('reportIssue')}
           </h3>
           
           <form onSubmit={handlePost}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
               <div>
-                <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
-                  Category
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: 8, 
+                  fontSize: 14, 
+                  fontWeight: 500,
+                  ...getTextStyles('primary')
+                }}>
+                  {getText('category')}
                 </label>
                 <select 
                   value={category} 
@@ -331,25 +360,32 @@ function Alerts() {
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid var(--border-color)',
                     borderRadius: 12,
                     fontSize: 16,
                     transition: 'all 0.2s',
                     outline: 'none',
-                    background: '#fafafa'
+                    background: 'var(--card-bg)',
+                    color: 'var(--text-primary)'
                   }}
                 >
-                  <option value="transport">Transport</option>
-                  <option value="accessibility">Accessibility</option>
-                  <option value="roadway">Roadway</option>
-                  <option value="weather">Weather</option>
-                  <option value="emergency">Emergency</option>
+                  <option value="transport">{getText('transport')}</option>
+                  <option value="accessibility">{getText('accessibility')}</option>
+                  <option value="roadway">{getText('roadway')}</option>
+                  <option value="weather">{getText('weather')}</option>
+                  <option value="emergency">{getText('emergency')}</option>
                 </select>
               </div>
               
               <div>
-                <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
-                  Location (Optional)
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: 8, 
+                  fontSize: 14, 
+                  fontWeight: 500,
+                  ...getTextStyles('primary')
+                }}>
+                  {getText('locationOptional')}
                 </label>
                 <input
                   type="text"
@@ -359,54 +395,58 @@ function Alerts() {
                   style={{
                     width: '100%',
                     padding: '12px 16px',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid var(--border-color)',
                     borderRadius: 12,
                     fontSize: 16,
                     transition: 'all 0.2s',
                     outline: 'none',
-                    background: '#fafafa'
+                    background: 'var(--card-bg)',
+                    color: 'var(--text-primary)'
                   }}
                   onFocus={e => {
-                    e.target.style.borderColor = '#1976d2';
-                    e.target.style.background = '#fff';
+                    e.target.style.borderColor = 'var(--accent-color)';
                   }}
                   onBlur={e => {
-                    e.target.style.borderColor = '#e0e0e0';
-                    e.target.style.background = '#fafafa';
+                    e.target.style.borderColor = 'var(--border-color)';
                   }}
                 />
               </div>
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
-                Alert Message
+              <label style={{ 
+                display: 'block', 
+                marginBottom: 8, 
+                fontSize: 14, 
+                fontWeight: 500,
+                ...getTextStyles('primary')
+              }}>
+                {getText('alertMessage')}
               </label>
               <textarea
                 value={message}
                 onChange={e => setMessage(e.target.value)}
-                placeholder="Describe the issue or alert..."
+                placeholder={getText('describeIssue')}
                 required
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  border: '2px solid #e0e0e0',
+                  border: '2px solid var(--border-color)',
                   borderRadius: 12,
                   fontSize: 16,
                   transition: 'all 0.2s',
                   outline: 'none',
-                  background: '#fafafa',
+                  background: 'var(--card-bg)',
+                  color: 'var(--text-primary)',
                   minHeight: 80,
                   resize: 'vertical',
                   fontFamily: 'inherit'
                 }}
                 onFocus={e => {
-                  e.target.style.borderColor = '#1976d2';
-                  e.target.style.background = '#fff';
+                  e.target.style.borderColor = 'var(--accent-color)';
                 }}
                 onBlur={e => {
-                  e.target.style.borderColor = '#e0e0e0';
-                  e.target.style.background = '#fafafa';
+                  e.target.style.borderColor = 'var(--border-color)';
                 }}
               />
             </div>
@@ -415,19 +455,17 @@ function Alerts() {
               type="submit"
               disabled={!message.trim()}
               style={{
-                background: !message.trim() ? '#ccc' : 'linear-gradient(135deg, #ff5722 0%, #ff7043 100%)',
-                color: '#fff',
-                border: 'none',
+                ...getButtonStyles(!message.trim() ? 'ghost' : 'primary'),
                 borderRadius: 12,
                 padding: '14px 32px',
                 fontSize: 16,
                 fontWeight: 600,
                 cursor: !message.trim() ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s',
-                boxShadow: !message.trim() ? 'none' : '0 4px 16px rgba(255, 87, 34, 0.3)'
+                opacity: !message.trim() ? 0.5 : 1
               }}
             >
-              Post Alert
+              {getText('postAlert')}
             </button>
           </form>
         </section>

@@ -1,0 +1,92 @@
+/* Global theme variables will be set by the PreferencesContext */
+:root {
+  /* Default light theme variables - will be overridden by context */
+  --bg-primary: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --bg-secondary: #ffffff;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --accent-color: #1976d2;
+  --border-color: #e0e0e0;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  --card-bg: #ffffff;
+  --nav-bg: #ffffff;
+  --focus-outline: 2px solid #1976d2;
+}
+
+/* Theme-specific styles */
+/* Light theme is the default */
+
+/* Dark theme styles are handled via CSS custom properties */
+
+/* High contrast theme styles are handled via CSS custom properties */
+
+/* Voice mode enhancements */
+/* .voice-mode ruleset removed as it was empty */
+
+.voice-mode *:focus {
+  outline: var(--focus-outline) !important;
+  outline-offset: 2px !important;
+}
+
+/* Global focus styles */
+*:focus {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* High contrast mode specific styles */
+.theme-high-contrast button,
+.theme-high-contrast input,
+.theme-high-contrast select,
+.theme-high-contrast textarea {
+  border: 2px solid #ffffff !important;
+}
+
+.theme-high-contrast button:hover,
+.theme-high-contrast button:focus {
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Ensure proper contrast for form elements */
+.theme-dark input,
+.theme-dark select,
+.theme-dark textarea {
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.theme-dark input:focus,
+.theme-dark select:focus,
+.theme-dark textarea:focus {
+  border-color: var(--accent-color);
+  background: var(--bg-secondary);
+}
+
+/* Loading and transition states */
+.preferences-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Responsive design helpers */
+@media (max-width: 768px) {
+  .voice-mode *:focus {
+    outline-width: 3px !important;
+  }
+}
+
+/* Print styles - always use high contrast for printing */
+@media print {
+  * {
+    background: white !important;
+    color: black !important;
+    border-color: black !important;
+  }
+}

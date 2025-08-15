@@ -1,17 +1,18 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-// Icons have been removed
+import { usePreferences } from '../context/PreferencesContext';
 
 function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { getText, getButtonStyles, getTextStyles } = usePreferences();
 
   const navItems = [
-    { label: 'Home', path: '/' },
-    { label: 'Navigate', path: '/navigate' },
-    { label: 'Alerts', path: '/alerts' },
-    { label: 'Community', path: '/community' },
-    { label: 'Settings', path: '/settings' }
+    { label: getText('home'), path: '/' },
+    { label: getText('navigate'), path: '/navigate' },
+    { label: getText('alerts'), path: '/alerts' },
+    { label: getText('community'), path: '/community' },
+    { label: getText('settings'), path: '/settings' }
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -20,15 +21,16 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
     <>
       {/* Top Header */}
       <header style={{ 
-        background: '#fff', 
+        background: 'var(--nav-bg)', 
         padding: '12px 20px', 
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        boxShadow: 'var(--shadow)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         position: 'sticky',
         top: 0,
-        zIndex: 1000
+        zIndex: 1000,
+        borderBottom: '1px solid var(--border-color)'
       }}>
         <div 
           onClick={() => navigate('/')}
@@ -39,15 +41,20 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
             width: 40,
             height: 40,
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
+            background: 'var(--accent-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative'
           }}>
-            <span style={{ fontSize: 18, color: '#fff', fontWeight: 'bold' }}>AC</span>
+            <span style={{ fontSize: 18, color: 'var(--nav-bg)', fontWeight: 'bold' }}>AC</span>
           </div>
-          <h1 style={{ margin: 0, fontSize: 20, color: '#1976d2', fontWeight: 600 }}>
+          <h1 style={{ 
+            margin: 0, 
+            fontSize: 20, 
+            fontWeight: 600,
+            ...getTextStyles('primary')
+          }}>
             Accessible Chennai
           </h1>
         </div>
@@ -56,24 +63,14 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
           <button 
             onClick={onLogout}
             style={{ 
-              background: 'none', 
-              border: '1px solid #ddd', 
+              ...getButtonStyles('ghost'),
               padding: '8px 16px', 
               borderRadius: 6, 
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              fontSize: 14
-            }}
-            onMouseOver={e => {
-              e.target.style.background = '#f5f5f5';
-              e.target.style.borderColor = '#1976d2';
-            }}
-            onMouseOut={e => {
-              e.target.style.background = 'none';
-              e.target.style.borderColor = '#ddd';
+              fontSize: 14,
+              transition: 'all 0.2s'
             }}
           >
-            Logout
+            {getText('logout')}
           </button>
         )}
       </header>
@@ -85,12 +82,12 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
           bottom: 0,
           left: 0,
           right: 0,
-          background: '#fff',
-          borderTop: '1px solid #eee',
+          background: 'var(--nav-bg)',
+          borderTop: '1px solid var(--border-color)',
           padding: '8px 0',
           display: 'flex',
           justifyContent: 'space-around',
-          boxShadow: '0 -2px 8px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--shadow)',
           zIndex: 1000
         }}>
           {navItems.map(item => {
@@ -108,7 +105,7 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: 4,
-                  color: active ? '#1976d2' : '#666',
+                  color: active ? 'var(--accent-color)' : 'var(--text-secondary)',
                   fontSize: 12,
                   transition: 'all 0.2s',
                   borderRadius: 8,
@@ -116,14 +113,14 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
                 }}
                 onMouseOver={e => {
                   if (!active) {
-                    e.target.style.background = '#f5f5f5';
-                    e.target.style.color = '#1976d2';
+                    e.target.style.background = 'var(--border-color)';
+                    e.target.style.color = 'var(--accent-color)';
                   }
                 }}
                 onMouseOut={e => {
                   if (!active) {
                     e.target.style.background = 'none';
-                    e.target.style.color = '#666';
+                    e.target.style.color = 'var(--text-secondary)';
                   }
                 }}
               >

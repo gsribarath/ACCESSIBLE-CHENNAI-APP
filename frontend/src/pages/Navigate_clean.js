@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import Navigation from '../components/Navigation';
-import Map from '../components/Map';
 import LocationService from '../services/LocationService';
-import { usePreferences } from '../context/PreferencesContext';
+import { PreferencesContext } from '../context/PreferencesContext';
 
 const Navigate = () => {
-  const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles } = usePreferences();
+  const { theme } = useContext(PreferencesContext);
   const [user] = useState({ name: 'User' });
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
@@ -15,114 +14,113 @@ const Navigate = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState({ from: [], to: [] });
-  const [activeInput, setActiveInput] = useState(null);
-  const fromInputRef = useRef(null);
-  const toInputRef = useRef(null);
-  const fromSuggestionsRef = useRef(null);
-  const toSuggestionsRef = useRef(null);
-  
-  // Handle click outside to close suggestions
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      // Check if click is outside both input and suggestions containers
-      const clickedFromInput = fromInputRef.current && fromInputRef.current.contains(event.target);
-      const clickedToInput = toInputRef.current && toInputRef.current.contains(event.target);
-      const clickedFromSuggestions = fromSuggestionsRef.current && fromSuggestionsRef.current.contains(event.target);
-      const clickedToSuggestions = toSuggestionsRef.current && toSuggestionsRef.current.contains(event.target);
-      
-      if (!clickedFromInput && !clickedToInput && !clickedFromSuggestions && !clickedToSuggestions) {
-        setSuggestions({ from: [], to: [] });
-        setActiveInput(null);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Add CSS animations to document head
-  useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes pulse {
-        0%, 100% { transform: scale(1); opacity: 1; }
-        50% { transform: scale(1.1); opacity: 0.7; }
-      }
-      
-      @keyframes blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.3; }
-      }
-    `;
-    document.head.appendChild(style);
-
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
 
   const handleLogout = () => {
     console.log('Logout');
   };
 
+  // Get theme styles
+  const getThemeStyles = () => ({
+    backgroundColor: theme === 'dark' ? '#1e1e1e' : '#ffffff',
+    color: theme === 'dark' ? '#ffffff' : '#000000',
+    minHeight: '100vh'
+  });
+
+  const getCardStyles = () => ({
+    backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
+    border: `1px solid ${theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+    borderRadius: '12px',
+    boxShadow: theme === 'dark' 
+      ? '0 4px 8px rgba(0,0,0,0.3)' 
+      : '0 2px 8px rgba(0,0,0,0.1)'
+  });
+
+  const getTextStyles = (type) => ({
+    color: type === 'primary' 
+      ? (theme === 'dark' ? '#ffffff' : '#000000')
+      : (theme === 'dark' ? '#cccccc' : '#666666')
+  });
+
+  const getButtonStyles = (variant) => {
+    const baseStyles = {
+      border: 'none',
+      borderRadius: '8px',
+      padding: '12px 24px',
+      fontSize: '14px',
+      fontWeight: '600',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease'
+    };
+
+    switch (variant) {
+      case 'primary':
+        return {
+          ...baseStyles,
+          backgroundColor: '#007bff',
+          color: 'white'
+        };
+      case 'ghost':
+        return {
+          ...baseStyles,
+          backgroundColor: 'transparent',
+          color: theme === 'dark' ? '#ffffff' : '#000000',
+          border: `1px solid ${theme === 'dark' ? '#404040' : '#e0e0e0'}`
+        };
+      default:
+        return baseStyles;
+    }
+  };
+
   // Location Dropdown Component
   const LocationDropdown = ({ value, onChange, placeholder, suggestions, onInputChange }) => {
     const [isOpen, setIsOpen] = useState(false);
-    const [localValue, setLocalValue] = useState('');
+    const [inputValue, setInputValue] = useState(value);
+
+    useEffect(() => {
+      setInputValue(value);
+    }, [value]);
 
     const handleInputChange = (e) => {
       const newValue = e.target.value;
-      setLocalValue(newValue);
+      setInputValue(newValue);
       onInputChange(newValue);
-      setIsOpen(true);
-    };
-
-    const handleFocus = () => {
-      setIsOpen(true);
-      // Trigger suggestions on focus
-      onInputChange(localValue);
+      setIsOpen(newValue.length > 0);
     };
 
     const handleSelect = (suggestion) => {
-      setLocalValue(suggestion);
+      setInputValue(suggestion);
       onChange(suggestion);
       setIsOpen(false);
-    };
-
-    const handleBlur = () => {
-      setTimeout(() => setIsOpen(false), 200);
     };
 
     return (
       <div style={{ position: 'relative', width: '100%' }}>
         <input
           type="text"
-          value={localValue}
+          value={inputValue}
           onChange={handleInputChange}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
           placeholder={placeholder}
           style={{
             width: '100%',
             padding: '12px',
-            border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+            border: `1px solid ${theme === 'dark' ? '#404040' : '#e0e0e0'}`,
             borderRadius: '8px',
             fontSize: '14px',
-            backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-            color: preferences.theme === 'dark' ? '#ffffff' : '#000000'
+            backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
+            color: theme === 'dark' ? '#ffffff' : '#000000'
           }}
+          onFocus={() => setIsOpen(inputValue.length > 0)}
+          onBlur={() => setTimeout(() => setIsOpen(false), 200)}
         />
         
-        {isOpen && suggestions && suggestions.length > 0 && (
+        {isOpen && suggestions.length > 0 && (
           <div style={{
             position: 'absolute',
             top: '100%',
             left: 0,
             right: 0,
-            backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-            border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+            backgroundColor: theme === 'dark' ? '#2d2d2d' : '#ffffff',
+            border: `1px solid ${theme === 'dark' ? '#404040' : '#e0e0e0'}`,
             borderRadius: '8px',
             boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
             zIndex: 1000,
@@ -137,11 +135,11 @@ const Navigate = () => {
                   padding: '12px',
                   cursor: 'pointer',
                   borderBottom: index < suggestions.length - 1 
-                    ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}` 
+                    ? `1px solid ${theme === 'dark' ? '#404040' : '#e0e0e0'}` 
                     : 'none',
-                  color: preferences.theme === 'dark' ? '#ffffff' : '#000000'
+                  color: theme === 'dark' ? '#ffffff' : '#000000'
                 }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f5f5f5'}
+                onMouseEnter={(e) => e.target.style.backgroundColor = theme === 'dark' ? '#404040' : '#f5f5f5'}
                 onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
               >
                 {suggestion}
@@ -443,14 +441,134 @@ const Navigate = () => {
         </div>
 
         {/* Interactive Navigation Map */}
-        <Map 
-          center={{ lat: 13.0827, lng: 80.2707 }}
-          zoom={15}
-          routes={[route]}
-          fromLocation={{ name: route.from || 'Start' }}
-          toLocation={{ name: route.to || 'Destination' }}
-          accessibilityMarkers={route.accessibilityFeatures || []}
-        />
+        <div style={{
+          ...getCardStyles(),
+          padding: 0,
+          marginBottom: 16,
+          overflow: 'hidden',
+          borderRadius: 16
+        }}>
+          <div style={{
+            height: 300,
+            background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column'
+          }}>
+            {/* Map Header */}
+            <div style={{
+              padding: 12,
+              background: 'rgba(0,0,0,0.3)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 18 }}>🗺️</span>
+                <span style={{ fontSize: 14, fontWeight: 600 }}>Live Navigation</span>
+                {isNavigating && (
+                  <span style={{
+                    background: '#4caf50',
+                    padding: '2px 8px',
+                    borderRadius: 12,
+                    fontSize: 10,
+                    fontWeight: 600,
+                    animation: 'blink 1s infinite'
+                  }}>
+                    LIVE
+                  </span>
+                )}
+              </div>
+              <div style={{ fontSize: 12 }}>
+                Step {currentStep + 1} of {route.steps?.length || 0}
+              </div>
+            </div>
+            
+            {/* Navigation Progress */}
+            <div style={{
+              padding: '0 12px 12px 12px'
+            }}>
+              <div style={{
+                width: '100%',
+                height: 4,
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: 2,
+                overflow: 'hidden'
+              }}>
+                <div style={{
+                  height: '100%',
+                  width: `${progress}%`,
+                  background: isNavigating ? 'linear-gradient(90deg, #4caf50, #8bc34a)' : '#4caf50',
+                  transition: 'width 0.5s ease',
+                  borderRadius: 2
+                }} />
+              </div>
+            </div>
+            
+            {/* Route Visualization */}
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 20,
+                color: 'white'
+              }}>
+                {/* Current Step Indicator */}
+                <div style={{
+                  background: isNavigating ? 'rgba(76, 175, 80, 0.9)' : 'rgba(255,255,255,0.2)',
+                  padding: '12px 20px',
+                  borderRadius: 20,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  minWidth: 200,
+                  border: isNavigating ? '2px solid #4caf50' : '2px solid rgba(255,255,255,0.3)',
+                  boxShadow: isNavigating ? '0 0 20px rgba(76, 175, 80, 0.5)' : 'none'
+                }}>
+                  {isNavigating ? '🚶‍♂️ ' : '📍 '}
+                  {route.steps?.[currentStep] || 'Ready to navigate'}
+                </div>
+                
+                {/* Progress Indicator */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  fontSize: 12
+                }}>
+                  <span>🚩 Start</span>
+                  <div style={{
+                    width: 100,
+                    height: 2,
+                    background: 'rgba(255,255,255,0.3)',
+                    borderRadius: 1,
+                    position: 'relative'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      left: `${progress}%`,
+                      top: -4,
+                      width: 10,
+                      height: 10,
+                      background: isNavigating ? '#4caf50' : '#fff',
+                      borderRadius: '50%',
+                      transform: 'translateX(-50%)',
+                      animation: isNavigating ? 'pulse 1s infinite' : 'none'
+                    }} />
+                  </div>
+                  <span>🎯 Destination</span>
+                </div>
+                
+                {/* Status */}
+                <div style={{ fontSize: 12, opacity: 0.8 }}>
+                  {isNavigating ? `${Math.round(progress)}% Complete` : 'Tap Start Navigation to begin'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Current Step Details */}
         <div style={{
@@ -582,14 +700,22 @@ const Navigate = () => {
   // Handle input changes and get suggestions
   const handleFromInputChange = (value) => {
     setFromLocation(value);
-    const filtered = LocationService.getLocationSuggestions(value || '');
-    setSuggestions(prev => ({ ...prev, from: filtered }));
+    if (value.length > 0) {
+      const filtered = LocationService.getLocationSuggestions(value);
+      setSuggestions(prev => ({ ...prev, from: filtered }));
+    } else {
+      setSuggestions(prev => ({ ...prev, from: [] }));
+    }
   };
 
   const handleToInputChange = (value) => {
     setToLocation(value);
-    const filtered = LocationService.getLocationSuggestions(value || '');
-    setSuggestions(prev => ({ ...prev, to: filtered }));
+    if (value.length > 0) {
+      const filtered = LocationService.getLocationSuggestions(value);
+      setSuggestions(prev => ({ ...prev, to: filtered }));
+    } else {
+      setSuggestions(prev => ({ ...prev, to: [] }));
+    }
   };
 
   // Search for routes
@@ -680,7 +806,7 @@ const Navigate = () => {
           </p>
         </section>
 
-          {/* Location Input */}
+        {/* Location Input */}
         <section style={{ 
           ...getCardStyles(),
           padding: 24, 
@@ -712,84 +838,13 @@ const Navigate = () => {
               }}>
                 From
               </label>
-              {/* Simple input field with suggestions */}
-              <div style={{ position: 'relative', width: '100%' }}>
-                <input
-                  ref={fromInputRef}
-                  type="text"
-                  value={fromLocation}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFromLocation(value);
-                    const filtered = LocationService.getLocationSuggestions(value);
-                    setSuggestions(prev => ({ ...prev, from: filtered }));
-                    setActiveInput('from');
-                  }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                    const filtered = LocationService.getLocationSuggestions(fromLocation || '');
-                    setSuggestions(prev => ({ ...prev, from: filtered }));
-                    setActiveInput('from');
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveInput('from');
-                  }}
-                  placeholder="Enter starting location"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                    color: preferences.theme === 'dark' ? '#ffffff' : '#000000'
-                  }}
-                />
-                
-                {suggestions.from.length > 0 && activeInput === 'from' && (
-                  <div 
-                    ref={fromSuggestionsRef}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                    border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                    zIndex: 1000,
-                    maxHeight: '200px',
-                    overflowY: 'auto'
-                  }}>
-                    {suggestions.from.map((suggestion, index) => (
-                      <div
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setFromLocation(suggestion);
-                          setSuggestions(prev => ({ ...prev, from: [] }));
-                          setActiveInput(null);
-                        }}
-                        style={{
-                          padding: '12px',
-                          cursor: 'pointer',
-                          borderBottom: index < suggestions.from.length - 1 
-                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}` 
-                            : 'none',
-                          color: preferences.theme === 'dark' ? '#ffffff' : '#000000'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f5f5f5'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      >
-                        {suggestion}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <LocationDropdown
+                value={fromLocation}
+                onChange={setFromLocation}
+                placeholder="Enter starting location"
+                suggestions={suggestions.from}
+                onInputChange={handleFromInputChange}
+              />
             </div>
             
             <div>
@@ -802,86 +857,17 @@ const Navigate = () => {
               }}>
                 To
               </label>
-              {/* Simple input field with suggestions */}
-              <div style={{ position: 'relative', width: '100%' }}>
-                <input
-                  ref={toInputRef}
-                  type="text"
-                  value={toLocation}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setToLocation(value);
-                    const filtered = LocationService.getLocationSuggestions(value);
-                    setSuggestions(prev => ({ ...prev, to: filtered }));
-                    setActiveInput('to');
-                  }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                    const filtered = LocationService.getLocationSuggestions(toLocation || '');
-                    setSuggestions(prev => ({ ...prev, to: filtered }));
-                    setActiveInput('to');
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveInput('to');
-                  }}
-                  placeholder="Enter destination"
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                    color: preferences.theme === 'dark' ? '#ffffff' : '#000000'
-                  }}
-                />
-                
-                {suggestions.to.length > 0 && activeInput === 'to' && (
-                  <div 
-                    ref={toSuggestionsRef}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                    border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-                    zIndex: 1000,
-                    maxHeight: '200px',
-                    overflowY: 'auto'
-                  }}>
-                    {suggestions.to.map((suggestion, index) => (
-                      <div
-                        key={index}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setToLocation(suggestion);
-                          setSuggestions(prev => ({ ...prev, to: [] }));
-                          setActiveInput(null);
-                        }}
-                        style={{
-                          padding: '12px',
-                          cursor: 'pointer',
-                          borderBottom: index < suggestions.to.length - 1 
-                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}` 
-                            : 'none',
-                          color: preferences.theme === 'dark' ? '#ffffff' : '#000000'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f5f5f5'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      >
-                        {suggestion}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+              <LocationDropdown
+                value={toLocation}
+                onChange={setToLocation}
+                placeholder="Enter destination"
+                suggestions={suggestions.to}
+                onInputChange={handleToInputChange}
+              />
             </div>
-          </div>          {error && (
+          </div>
+
+          {error && (
             <div style={{ 
               padding: 12, 
               marginBottom: 16, 
@@ -909,14 +895,7 @@ const Navigate = () => {
         </section>
 
         {/* Route Map */}
-        {selectedRoute && <Map 
-          center={{ lat: 13.0827, lng: 80.2707 }}
-          zoom={12}
-          routes={[selectedRoute]}
-          fromLocation={{ name: fromLocation }}
-          toLocation={{ name: toLocation }}
-          accessibilityMarkers={[]}
-        />}
+        {selectedRoute && <SimpleMap route={selectedRoute} />}
 
         {/* Route Results */}
         {routes.length > 0 && (
@@ -942,7 +921,7 @@ const Navigate = () => {
                   padding: 20,
                   border: selectedRoute === route 
                     ? '2px solid #007bff' 
-                    : `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+                    : `1px solid ${theme === 'dark' ? '#404040' : '#e0e0e0'}`,
                   cursor: 'pointer'
                 }}
                 onClick={() => setSelectedRoute(route)}
@@ -1045,6 +1024,18 @@ const Navigate = () => {
           </section>
         )}
       </main>
+
+      <style jsx>{`
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.1); opacity: 0.7; }
+        }
+        
+        @keyframes blink {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
     </div>
   );
 };
