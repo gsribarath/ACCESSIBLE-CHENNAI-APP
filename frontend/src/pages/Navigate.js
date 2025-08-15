@@ -1,4 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faMap, 
+  faMapMarkerAlt, 
+  faPlay, 
+  faStop, 
+  faCompass,
+  faSearch,
+  faTarget
+} from '@fortawesome/free-solid-svg-icons';
 import Navigation from '../components/Navigation';
 import Map from '../components/Map';
 import LocationService from '../services/LocationService';
@@ -189,7 +199,7 @@ const Navigate = () => {
             justifyContent: 'space-between'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 16 }}>🗺️</span>
+              <FontAwesomeIcon icon={faMap} style={{ fontSize: 16 }} />
               <span style={{ fontSize: 14, fontWeight: 600 }}>Route Map</span>
             </div>
             {route && (
@@ -279,7 +289,9 @@ const Navigate = () => {
                 textAlign: 'center',
                 opacity: 0.7
               }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>📍</div>
+                <div style={{ fontSize: 48, marginBottom: 16, color: '#3B82F6' }}>
+                  <FontAwesomeIcon icon={faMapMarkerAlt} />
+                </div>
                 <div style={{ fontSize: 14 }}>Select route to view map</div>
               </div>
             )}
@@ -417,7 +429,7 @@ const Navigate = () => {
                   gap: 4
                 }}
               >
-                ▶️ Start Navigation
+                <FontAwesomeIcon icon={faPlay} /> Start Navigation
               </button>
             ) : (
               <button
@@ -436,7 +448,7 @@ const Navigate = () => {
                   gap: 4
                 }}
               >
-                ⏹️ Stop
+                <FontAwesomeIcon icon={faStop} /> Stop
               </button>
             )}
           </div>
@@ -666,15 +678,21 @@ const Navigate = () => {
         }}>
           <h1 style={{ 
             margin: '0 0 8px 0', 
-            fontSize: 28, 
-            fontWeight: 700 
+            fontSize: 'var(--font-size-3xl)', 
+            fontWeight: 'var(--font-weight-bold)',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: 'var(--letter-spacing-tight)',
+            ...getTextStyles('primary')
           }}>
-            🧭 Navigate Chennai
+            <FontAwesomeIcon icon={faCompass} /> Navigate Chennai
           </h1>
           <p style={{ 
             margin: 0, 
-            fontSize: 16, 
-            opacity: 0.9 
+            fontSize: 'var(--font-size-base)',
+            fontFamily: 'var(--font-secondary)',
+            lineHeight: 'var(--line-height-normal)',
+            opacity: 0.9,
+            ...getTextStyles('secondary')
           }}>
             Find accessible routes with real-time navigation
           </p>
@@ -706,8 +724,10 @@ const Navigate = () => {
               <label style={{ 
                 display: 'block', 
                 marginBottom: 8, 
-                fontSize: 14, 
-                fontWeight: 500,
+                fontSize: 'var(--font-size-sm)', 
+                fontWeight: 'var(--font-weight-medium)',
+                fontFamily: 'var(--font-ui)',
+                letterSpacing: 'var(--letter-spacing-wide)',
                 ...getTextStyles('primary')
               }}>
                 From
@@ -796,8 +816,10 @@ const Navigate = () => {
               <label style={{ 
                 display: 'block', 
                 marginBottom: 8, 
-                fontSize: 14, 
-                fontWeight: 500,
+                fontSize: 'var(--font-size-sm)', 
+                fontWeight: 'var(--font-weight-medium)',
+                fontFamily: 'var(--font-ui)',
+                letterSpacing: 'var(--letter-spacing-wide)',
                 ...getTextStyles('primary')
               }}>
                 To
@@ -904,7 +926,7 @@ const Navigate = () => {
               cursor: (isLoading || !fromLocation || !toLocation) ? 'not-allowed' : 'pointer'
             }}
           >
-            {isLoading ? 'Searching...' : '🔍 Find Routes'}
+            {isLoading ? 'Searching...' : <><FontAwesomeIcon icon={faSearch} /> Find Routes</>}
           </button>
         </section>
 

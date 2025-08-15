@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faExclamationTriangle,
+  faMapMarkerAlt,
+  faLocationArrow,
+  faEdit
+} from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
 
@@ -377,15 +384,19 @@ function Community() {
         }}>
           <h1 style={{ 
             margin: '0 0 8px 0', 
-            fontSize: 28, 
-            fontWeight: 600,
+            fontSize: 'var(--font-size-3xl)', 
+            fontWeight: 'var(--font-weight-bold)',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: 'var(--letter-spacing-tight)',
             ...getTextStyles('primary')
           }}>
             Community Feed
           </h1>
           <p style={{ 
             margin: 0, 
-            fontSize: 16,
+            fontSize: 'var(--font-size-base)',
+            fontFamily: 'var(--font-secondary)',
+            lineHeight: 'var(--line-height-normal)',
             ...getTextStyles('secondary')
           }}>
             Connect, share experiences, and help each other navigate Chennai accessibly
@@ -431,7 +442,7 @@ function Community() {
                   e.target.style.boxShadow = '0 4px 16px rgba(244, 67, 54, 0.3)';
                 }}
               >
-                🚨 Emergency Help
+                <FontAwesomeIcon icon={faExclamationTriangle} /> Emergency Help
               </button>
             </div>
 
@@ -527,7 +538,7 @@ function Community() {
                         </div>
                         {post.location && (
                           <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
-                            📍 {post.location}
+                            <FontAwesomeIcon icon={faMapMarkerAlt} /> {post.location}
                           </div>
                         )}
                       </div>
@@ -800,7 +811,7 @@ function Community() {
                       }}
                       title="Use current location"
                     >
-                      📍 GPS
+                      <FontAwesomeIcon icon={faLocationArrow} /> GPS
                     </button>
                   </div>
                   
@@ -922,7 +933,7 @@ function Community() {
                     boxShadow: !newPost.trim() ? 'none' : '0 4px 16px rgba(25, 118, 210, 0.3)'
                   }}
                 >
-                  {isEmergency ? '🚨 Post Emergency' : '📝 Post Message'}
+                  {isEmergency ? <><FontAwesomeIcon icon={faExclamationTriangle} /> Post Emergency</> : <><FontAwesomeIcon icon={faEdit} /> Post Message</>}
                 </button>
               </form>
             </section>

@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faHandPaper, 
+  faCompass, 
+  faExclamationTriangle, 
+  faUsers, 
+  faCog,
+  faPhoneAlt,
+  faCircle
+} from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
 
@@ -9,7 +19,7 @@ function Home() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const navigate = useNavigate();
 
-  const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
+  const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText, preferences } = usePreferences();
 
   useEffect(() => {
     const userData = localStorage.getItem('ac_user');
@@ -161,179 +171,374 @@ function Home() {
 
   // Main home page for logged-in users
   return (
-    <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
+    <div style={{ ...getThemeStyles(), paddingBottom: 80, position: 'relative' }}>
       <Navigation user={user} onLogout={handleLogout} />
 
       {/* Main Content */}
-      <main style={{ padding: '20px', maxWidth: 1200, margin: '0 auto' }}>
+      <main style={{ padding: '20px', maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         {/* Welcome Section */}
         <section style={{ 
           ...getCardStyles(),
-          padding: 24, 
-          borderRadius: 16, 
-          marginBottom: 20
+          padding: '32px', 
+          borderRadius: '20px', 
+          marginBottom: '24px',
+          position: 'relative',
+          overflow: 'hidden',
+          background: `linear-gradient(135deg, 
+            ${preferences.theme === 'dark' ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.95)'} 0%, 
+            ${preferences.theme === 'dark' ? 'rgba(15,23,42,0.9)' : 'rgba(248,250,252,0.9)'} 100%)`,
+          backdropFilter: 'blur(10px)',
+          border: `1px solid ${preferences.theme === 'dark' ? 'rgba(71,85,105,0.3)' : 'rgba(226,232,240,0.5)'}`,
+          boxShadow: preferences.theme === 'dark' ? 
+            '0 8px 32px rgba(0,0,0,0.3)' : 
+            '0 8px 32px rgba(15,23,42,0.08)'
         }}>
-          <h2 style={{ 
-            margin: '0 0 8px 0', 
-            fontSize: 28, 
-            fontWeight: 600,
-            ...getTextStyles('primary')
-          }}>
-            {greeting}!
-          </h2>
-          <p style={{ 
-            margin: 0, 
-            fontSize: 16, 
-            lineHeight: 1.5,
-            ...getTextStyles('secondary')
-          }}>
-            {getText('welcomeMessage')}
-          </p>
+          {/* Professional accent element */}
+          <div style={{
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            right: '0',
+            height: '4px',
+            background: 'linear-gradient(90deg, #3B82F6 0%, #1D4ED8 50%, #3B82F6 100%)',
+            animation: 'slideRight 3s ease-in-out infinite'
+          }} />
+          
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                background: `linear-gradient(135deg, 
+                  ${preferences.theme === 'dark' ? '#3B82F6' : '#1E40AF'} 0%, 
+                  ${preferences.theme === 'dark' ? '#1D4ED8' : '#3B82F6'} 100%)`,
+                borderRadius: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '24px',
+                color: 'white',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+              }}>
+                <FontAwesomeIcon icon={faHandPaper} />
+              </div>
+              <div>
+                <h2 style={{ 
+                  margin: '0 0 4px 0', 
+                  fontSize: 'var(--font-size-3xl)', 
+                  fontWeight: 'var(--font-weight-extrabold)',
+                  fontFamily: 'var(--font-heading)',
+                  letterSpacing: 'var(--letter-spacing-tight)'
+                }}>
+                  Welcome back, {user?.name?.split(' ')[0] || 'User'}!
+                </h2>
+                <p style={{ 
+                  margin: 0, 
+                  fontSize: 'var(--font-size-base)',
+                  fontFamily: 'var(--font-secondary)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  ...getTextStyles('secondary')
+                }}>
+                  Your accessibility navigation hub for Chennai
+                </p>
+              </div>
+            </div>
+            
+            <p style={{ 
+              margin: '16px 0 0 0', 
+              fontSize: 'var(--font-size-base)',
+              fontFamily: 'var(--font-secondary)',
+              lineHeight: 'var(--line-height-relaxed)',
+              ...getTextStyles('secondary')
+            }}>
+              Navigate Chennai with confidence using our comprehensive accessibility features
+            </p>
+          </div>
         </section>
 
         {/* Quick Actions Grid */}
-        <section style={{ marginBottom: 24 }}>
+        <section style={{ marginBottom: '32px' }}>
           <h3 style={{ 
-            marginBottom: 16, 
-            fontSize: 20, 
-            fontWeight: 600,
-            ...getTextStyles('primary')
+            marginBottom: '24px', 
+            fontSize: 'var(--font-size-2xl)', 
+            fontWeight: 'var(--font-weight-bold)',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: 'var(--letter-spacing-tight)',
+            ...getTextStyles('primary'),
+            textAlign: 'center'
           }}>
-            {getText('quickActions')}
+            Essential Services
           </h3>
           <div style={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-            gap: 16 
+            gap: '20px' 
           }}>
-            {quickActions.map(action => (
-              <div
-                key={action.title}
-                onClick={() => navigate(action.path)}
-                style={{
-                  ...getCardStyles(),
-                  padding: 24,
-                  borderRadius: 16,
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  position: 'relative',
-                  overflow: 'hidden'
-                }}
-                onMouseOver={e => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.borderColor = 'var(--accent-color)';
-                }}
-                onMouseOut={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = 'var(--border-color)';
-                }}
-              >
-                <div style={{ 
-                  fontSize: 24, 
-                  marginBottom: 16, 
-                  opacity: 0.9, 
-                  color: 'var(--accent-color)', 
-                  fontWeight: 'bold' 
-                }}>
-                  {action.title[0]}
+            {quickActions.map((action, index) => {
+              const actionData = [
+                { 
+                  color: '#3B82F6',
+                  bgColor: 'rgba(59, 130, 246, 0.1)',
+                  borderColor: 'rgba(59, 130, 246, 0.2)',
+                  icon: faCompass,
+                  title: 'Smart Navigation',
+                  description: 'AI-powered accessible route planning'
+                },
+                { 
+                  color: '#EF4444',
+                  bgColor: 'rgba(239, 68, 68, 0.1)',
+                  borderColor: 'rgba(239, 68, 68, 0.2)',
+                  icon: faExclamationTriangle,
+                  title: 'Community Alerts',
+                  description: 'Real-time accessibility updates'
+                },
+                { 
+                  color: '#10B981',
+                  bgColor: 'rgba(16, 185, 129, 0.1)',
+                  borderColor: 'rgba(16, 185, 129, 0.2)',
+                  icon: faUsers,
+                  title: 'Connect & Share',
+                  description: 'Join our inclusive community'
+                },
+                { 
+                  color: '#8B5CF6',
+                  bgColor: 'rgba(139, 92, 246, 0.1)',
+                  borderColor: 'rgba(139, 92, 246, 0.2)',
+                  icon: faCog,
+                  title: 'Accessibility Settings',
+                  description: 'Customize your experience'
+                }
+              ];
+              const currentAction = actionData[index] || actionData[0];
+              
+              return (
+                <div
+                  key={action.title}
+                  onClick={() => navigate(action.path)}
+                  style={{
+                    ...getCardStyles(),
+                    padding: '24px',
+                    borderRadius: '16px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    background: preferences.theme === 'dark' ? 
+                      'rgba(30, 41, 59, 0.8)' : 
+                      'rgba(255, 255, 255, 0.9)',
+                    border: `1px solid ${currentAction.borderColor}`,
+                    boxShadow: preferences.theme === 'dark' ? 
+                      '0 4px 16px rgba(0, 0, 0, 0.3)' : 
+                      '0 4px 16px rgba(0, 0, 0, 0.1)',
+                    backdropFilter: 'blur(10px)'
+                  }}
+                  onMouseOver={e => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = preferences.theme === 'dark' ? 
+                      '0 8px 32px rgba(0, 0, 0, 0.4)' : 
+                      '0 8px 32px rgba(0, 0, 0, 0.15)';
+                    e.currentTarget.style.borderColor = currentAction.color;
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = preferences.theme === 'dark' ? 
+                      '0 4px 16px rgba(0, 0, 0, 0.3)' : 
+                      '0 4px 16px rgba(0, 0, 0, 0.1)';
+                    e.currentTarget.style.borderColor = currentAction.borderColor;
+                  }}
+                >
+                  {/* Professional accent line */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '0',
+                    left: '0',
+                    right: '0',
+                    height: '3px',
+                    background: `linear-gradient(90deg, ${currentAction.color} 0%, transparent 100%)`,
+                    borderRadius: '16px 16px 0 0'
+                  }} />
+                  
+                  <div style={{ position: 'relative', zIndex: 2 }}>
+                    <div style={{ 
+                      fontSize: '24px', 
+                      marginBottom: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '56px',
+                      height: '56px',
+                      background: currentAction.bgColor,
+                      borderRadius: '14px',
+                      border: `2px solid ${currentAction.borderColor}`,
+                      transition: 'all 0.3s ease',
+                      color: currentAction.color
+                    }}>
+                      <FontAwesomeIcon icon={currentAction.icon} />
+                    </div>
+                    
+                    <h4 style={{ 
+                      margin: '0 0 8px 0', 
+                      fontSize: 'var(--font-size-lg)', 
+                      fontWeight: 'var(--font-weight-semibold)',
+                      fontFamily: 'var(--font-heading)',
+                      letterSpacing: 'var(--letter-spacing-tight)',
+                      color: currentAction.color,
+                      lineHeight: 'var(--line-height-tight)'
+                    }}>
+                      {currentAction.title}
+                    </h4>
+                    
+                    <p style={{ 
+                      margin: 0, 
+                      fontSize: 'var(--font-size-sm)',
+                      fontFamily: 'var(--font-secondary)',
+                      lineHeight: 'var(--line-height-normal)',
+                      ...getTextStyles('secondary')
+                    }}>
+                      {currentAction.description}
+                    </p>
+                    
+                    {/* Professional hover indicator */}
+                    <div style={{
+                      marginTop: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      opacity: 0.7,
+                      transition: 'opacity 0.3s ease'
+                    }}>
+                      <span style={{
+                        fontSize: 'var(--font-size-xs)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        fontFamily: 'var(--font-ui)',
+                        letterSpacing: 'var(--letter-spacing-wide)',
+                        color: currentAction.color
+                      }}>
+                        Learn more
+                      </span>
+                      <span style={{
+                        fontSize: '12px',
+                        color: currentAction.color
+                      }}>
+                        →
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <h4 style={{ 
-                  margin: '0 0 8px 0', 
-                  fontSize: 18, 
-                  fontWeight: 600,
-                  ...getTextStyles('primary')
-                }}>
-                  {action.title}
-                </h4>
-                <p style={{ 
-                  margin: 0, 
-                  fontSize: 14, 
-                  lineHeight: 1.4,
-                  ...getTextStyles('secondary')
-                }}>
-                  {action.desc}
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </section>
 
         {/* Recent Alerts */}
         <section style={{ 
           ...getCardStyles(),
-          padding: 24, 
-          borderRadius: 16,
-          marginBottom: 24
+          padding: '24px', 
+          borderRadius: '20px',
+          marginBottom: '24px',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <h3 style={{ 
-              margin: 0, 
-              fontSize: 20, 
-              fontWeight: 600,
-              ...getTextStyles('primary')
-            }}>
-              {getText('recentAlerts')}
-            </h3>
-            <button 
-              onClick={() => navigate('/alerts')}
-              style={{
-                ...getButtonStyles('ghost'),
-                fontSize: 14,
-                fontWeight: 500,
-                padding: '8px 12px',
-                borderRadius: 8,
-                transition: 'all 0.2s'
-              }}
-            >
-              View All →
-            </button>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {recentAlerts.map(alert => (
-              <div 
-                key={alert.id}
-                style={{
-                  padding: 20,
-                  background: 'var(--card-bg)',
-                  borderRadius: 12,
-                  borderLeft: '4px solid var(--accent-color)',
-                  transition: 'all 0.2s',
-                  opacity: 0.9
-                }}
-                onMouseOver={e => e.target.style.opacity = '1'}
-                onMouseOut={e => e.target.style.opacity = '0.9'}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div>
-                    <span style={{ 
-                      background: 'var(--accent-color)', 
-                      color: 'var(--card-bg)', 
-                      padding: '4px 12px', 
-                      borderRadius: 20, 
-                      fontSize: 12,
-                      fontWeight: 600
-                    }}>
-                      {alert.type}
-                    </span>
-                    <p style={{ 
-                      margin: '12px 0 0 0', 
-                      fontSize: 15, 
-                      lineHeight: 1.4,
-                      ...getTextStyles('primary')
-                    }}>
-                      {alert.msg}
-                    </p>
-                  </div>
-                  <span style={{ 
-                    fontSize: 12, 
-                    fontWeight: 500,
-                    ...getTextStyles('secondary')
-                  }}>
-                    {alert.time}
-                  </span>
+          {/* Decorative background element */}
+          <div style={{
+            position: 'absolute',
+            top: '-30px',
+            right: '-30px',
+            width: '100px',
+            height: '100px',
+            background: 'linear-gradient(135deg, #F44336 0%, #FF9800 100%)',
+            borderRadius: '50%',
+            opacity: 0.1
+          }} />
+          
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  background: 'linear-gradient(135deg, #F44336 0%, #FF9800 100%)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  color: 'white'
+                }}>
+                  <FontAwesomeIcon icon={faExclamationTriangle} />
                 </div>
+                <h3 style={{ 
+                  margin: 0, 
+                  fontSize: 'var(--font-size-xl)', 
+                  fontWeight: 'var(--font-weight-semibold)',
+                  fontFamily: 'var(--font-heading)',
+                  letterSpacing: 'var(--letter-spacing-tight)',
+                  ...getTextStyles('primary')
+                }}>
+                  Recent Alerts
+                </h3>
               </div>
-            ))}
+              <button 
+                onClick={() => navigate('/alerts')}
+                style={{
+                  ...getButtonStyles('ghost'),
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  padding: '8px 16px'
+                }}
+              >
+                View All →
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {recentAlerts.map((alert, index) => (
+                <div 
+                  key={index} 
+                  style={{
+                    padding: '16px',
+                    background: 'rgba(244, 67, 54, 0.05)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(244, 67, 54, 0.1)',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginTop: '4px',
+                      flexShrink: 0,
+                      color: alert.type === 'urgent' ? '#F44336' : '#FF9800'
+                    }}>
+                      <FontAwesomeIcon icon={faCircle} size="xs" />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ 
+                        margin: '0 0 4px 0', 
+                        fontSize: 'var(--font-size-sm)', 
+                        fontWeight: 'var(--font-weight-medium)',
+                        fontFamily: 'var(--font-secondary)',
+                        ...getTextStyles('primary')
+                      }}>
+                        {alert.message || alert.msg}
+                      </p>
+                      <p style={{ 
+                        margin: 0, 
+                        fontSize: 'var(--font-size-xs)',
+                        fontFamily: 'var(--font-ui)',
+                        ...getTextStyles('secondary')
+                      }}>
+                        {alert.time} • {alert.location || 'Chennai'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -341,43 +546,123 @@ function Home() {
         <section style={{ 
           background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)', 
           color: '#fff',
-          padding: 24, 
-          borderRadius: 16,
+          padding: '24px', 
+          borderRadius: '16px',
           textAlign: 'center',
-          boxShadow: '0 4px 20px rgba(238, 90, 36, 0.3)'
+          boxShadow: '0 4px 20px rgba(238, 90, 36, 0.3)',
+          position: 'relative',
+          overflow: 'hidden'
         }}>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 600 }}>
-            {getText('emergencyAssistance')}
-          </h4>
-          <p style={{ margin: '0 0 16px 0', fontSize: 14, opacity: 0.9 }}>
-            Need immediate help with accessibility?
-          </p>
-          <button 
-            style={{
-              background: '#fff',
-              color: '#ee5a24',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: 'pointer',
-              fontSize: 16,
-              transition: 'all 0.2s'
-            }}
-            onClick={() => window.location.href = 'tel:1077'}
-            onMouseOver={e => {
-              e.target.style.transform = 'scale(1.05)';
-              e.target.style.boxShadow = '0 4px 16px rgba(0,0,0,0.2)';
-            }}
-            onMouseOut={e => {
-              e.target.style.transform = 'scale(1)';
-              e.target.style.boxShadow = 'none';
-            }}
-          >
-            Call 1077
-          </button>
+          {/* Decorative elements */}
+          <div style={{
+            position: 'absolute',
+            top: '-20px',
+            left: '-20px',
+            width: '60px',
+            height: '60px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '50%'
+          }} />
+          <div style={{
+            position: 'absolute',
+            bottom: '-30px',
+            right: '-30px',
+            width: '80px',
+            height: '80px',
+            background: 'rgba(255, 255, 255, 0.1)',
+            borderRadius: '50%'
+          }} />
+          
+          <div style={{ position: 'relative', zIndex: 2 }}>
+            <div style={{
+              fontSize: '32px',
+              marginBottom: '12px',
+              color: 'white'
+            }}>
+              <FontAwesomeIcon icon={faPhoneAlt} />
+            </div>
+            <h4 style={{ 
+              margin: '0 0 8px 0', 
+              fontSize: 'var(--font-size-lg)', 
+              fontWeight: 'var(--font-weight-semibold)',
+              fontFamily: 'var(--font-heading)'
+            }}>
+              Emergency Assistance
+            </h4>
+            <p style={{ 
+              margin: '0 0 20px 0', 
+              fontSize: 'var(--font-size-sm)', 
+              fontFamily: 'var(--font-secondary)',
+              opacity: 0.9 
+            }}>
+              Immediate help is just a tap away
+            </p>
+            <button 
+              onClick={() => window.location.href = 'tel:112'}
+              style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                color: '#fff',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+                padding: '12px 24px',
+                borderRadius: '25px',
+                fontSize: 'var(--font-size-base)',
+                fontWeight: 'var(--font-weight-semibold)',
+                fontFamily: 'var(--font-ui)',
+                letterSpacing: 'var(--letter-spacing-wide)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                backdropFilter: 'blur(10px)'
+              }}
+              onMouseOver={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.transform = 'translateY(-2px)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+              }}
+            >
+              Call Emergency (112)
+            </button>
+          </div>
         </section>
       </main>
+
+      {/* Custom keyframes for animations */}
+      <style>{`
+        @keyframes slideRight {
+          0%, 100% { 
+            transform: translateX(-10px); 
+            opacity: 0.8;
+          }
+          50% { 
+            transform: translateX(10px); 
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { 
+            transform: scale(1); 
+            opacity: 0.8;
+          }
+          50% { 
+            transform: scale(1.05); 
+            opacity: 1;
+          }
+        }
+      `}</style>
     </div>
   );
 }

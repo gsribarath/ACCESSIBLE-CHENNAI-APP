@@ -122,53 +122,100 @@ export const PreferencesProvider = ({ children }) => {
       minHeight: '100vh',
       background: 'var(--bg-primary)',
       color: 'var(--text-primary)',
-      transition: 'all 0.3s ease'
+      transition: 'var(--transition)',
+      position: 'relative',
+      overflow: 'hidden'
     };
 
     return base;
   };
 
   const getCardStyles = () => ({
-    background: 'var(--card-bg)',
+    background: 'var(--bg-card)',
     color: 'var(--text-primary)',
-    border: `1px solid var(--border-color)`,
-    boxShadow: 'var(--shadow)',
-    transition: 'all 0.3s ease'
+    border: `1px solid var(--border-solid)`,
+    borderRadius: 'var(--radius-lg)',
+    boxShadow: 'var(--shadow-md)',
+    backdropFilter: 'blur(10px)',
+    transition: 'var(--transition)',
+    overflow: 'hidden'
   });
 
   const getTextStyles = (variant = 'primary') => ({
-    color: variant === 'primary' ? 'var(--text-primary)' : 'var(--text-secondary)',
-    transition: 'color 0.3s ease'
+    color: variant === 'primary' ? 'var(--text-primary)' : 
+          variant === 'secondary' ? 'var(--text-secondary)' : 
+          variant === 'accent' ? 'var(--text-accent)' : 'var(--text-primary)',
+    transition: 'var(--transition)'
   });
 
   const getButtonStyles = (variant = 'primary') => {
     const styles = {
       primary: {
-        background: 'var(--accent-color)',
-        color: 'var(--bg-secondary)',
-        border: 'none'
+        background: 'linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-purple) 100%)',
+        color: 'var(--text-light)',
+        border: 'none',
+        borderRadius: 'var(--radius-full)',
+        padding: '12px 24px',
+        fontWeight: '600',
+        fontSize: '14px',
+        boxShadow: 'var(--shadow-sm)',
+        transform: 'translateY(0)',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: 'var(--shadow-md)'
+        }
       },
       secondary: {
-        background: 'transparent',
-        color: 'var(--accent-color)',
-        border: `1px solid var(--accent-color)`
+        background: 'linear-gradient(135deg, var(--primary-green) 0%, var(--primary-blue) 100%)',
+        color: 'var(--text-light)',
+        border: 'none',
+        borderRadius: 'var(--radius-full)',
+        padding: '12px 24px',
+        fontWeight: '600',
+        fontSize: '14px',
+        boxShadow: 'var(--shadow-sm)'
       },
       ghost: {
         background: 'transparent',
         color: 'var(--text-primary)',
-        border: `1px solid var(--border-color)`
+        border: `2px solid var(--border-solid)`,
+        borderRadius: 'var(--radius-md)',
+        padding: '10px 20px',
+        fontWeight: '500',
+        fontSize: '14px'
       },
       danger: {
-        background: '#f44336',
-        color: 'white',
-        border: 'none'
+        background: 'linear-gradient(135deg, var(--primary-red) 0%, #ff6b6b 100%)',
+        color: 'var(--text-light)',
+        border: 'none',
+        borderRadius: 'var(--radius-full)',
+        padding: '12px 24px',
+        fontWeight: '600',
+        fontSize: '14px',
+        boxShadow: 'var(--shadow-sm)'
+      },
+      accent: {
+        background: 'linear-gradient(135deg, var(--primary-yellow) 0%, var(--primary-orange) 100%)',
+        color: 'var(--text-accent)',
+        border: 'none',
+        borderRadius: 'var(--radius-full)',
+        padding: '12px 24px',
+        fontWeight: '600',
+        fontSize: '14px',
+        boxShadow: 'var(--shadow-sm)'
       }
     };
 
     return {
       ...styles[variant],
-      transition: 'all 0.2s ease',
+      transition: 'var(--transition)',
       cursor: 'pointer',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '8px',
+      position: 'relative',
+      overflow: 'hidden',
       ':focus': {
         outline: 'var(--focus-outline)',
         outlineOffset: '2px'

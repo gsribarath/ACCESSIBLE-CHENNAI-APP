@@ -47,12 +47,19 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
             justifyContent: 'center',
             position: 'relative'
           }}>
-            <span style={{ fontSize: 18, color: 'var(--nav-bg)', fontWeight: 'bold' }}>AC</span>
+            <span style={{ 
+              fontSize: 18, 
+              color: 'var(--nav-bg)', 
+              fontWeight: 'var(--font-weight-bold)',
+              fontFamily: 'var(--font-heading)'
+            }}>AC</span>
           </div>
           <h1 style={{ 
             margin: 0, 
-            fontSize: 20, 
-            fontWeight: 600,
+            fontSize: 'var(--font-size-xl)', 
+            fontWeight: 'var(--font-weight-semibold)',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: 'var(--letter-spacing-tight)',
             ...getTextStyles('primary')
           }}>
             Accessible Chennai
@@ -66,7 +73,10 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
               ...getButtonStyles('ghost'),
               padding: '8px 16px', 
               borderRadius: 6, 
-              fontSize: 14,
+              fontSize: 'var(--font-size-sm)',
+              fontFamily: 'var(--font-ui)',
+              fontWeight: 'var(--font-weight-medium)',
+              letterSpacing: 'var(--letter-spacing-wide)',
               transition: 'all 0.2s'
             }}
           >
@@ -106,7 +116,10 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
                   alignItems: 'center',
                   gap: 4,
                   color: active ? 'var(--accent-color)' : 'var(--text-secondary)',
-                  fontSize: 12,
+                  fontSize: 'var(--font-size-xs)',
+                  fontFamily: 'var(--font-ui)',
+                  fontWeight: active ? 'var(--font-weight-semibold)' : 'var(--font-weight-medium)',
+                  letterSpacing: 'var(--letter-spacing-wide)',
                   transition: 'all 0.2s',
                   borderRadius: 8,
                   minWidth: 60
@@ -125,10 +138,12 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
                 }}
               >
                 <span style={{ 
-                  fontWeight: active ? '600' : '400',
-                  fontSize: 14,
-                  transform: active ? 'scale(1.1)' : 'scale(1)',
-                  transition: 'transform 0.2s'
+                  fontWeight: active ? 'var(--font-weight-semibold)' : 'var(--font-weight-normal)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontFamily: 'var(--font-ui)',
+                  letterSpacing: 'var(--letter-spacing-wide)',
+                  transform: active ? 'scale(1.05)' : 'scale(1)',
+                  transition: 'all 0.2s'
                 }}>
                   {item.label}
                 </span>

@@ -2,7 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
-// Icons have been removed
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faMapMarkerAlt, 
+  faExclamationTriangle, 
+  faCheckCircle,
+  faRefresh,
+  faSync
+} from '@fortawesome/free-solid-svg-icons';
 
 function Alerts() {
   const [user, setUser] = useState(null);
@@ -145,7 +152,7 @@ function Alerts() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           category, 
-          message: `${location ? `📍 ${location}: ` : ''}${message}`,
+          message: `${location ? `${location}: ` : ''}${message}`,
           location 
         }),
       });
@@ -204,15 +211,19 @@ function Alerts() {
         }}>
           <h1 style={{ 
             margin: '0 0 8px 0', 
-            fontSize: 28, 
-            fontWeight: 600,
+            fontSize: 'var(--font-size-3xl)', 
+            fontWeight: 'var(--font-weight-bold)',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: 'var(--letter-spacing-tight)',
             ...getTextStyles('primary')
           }}>
             {getText('realTimeAlerts')}
           </h1>
           <p style={{ 
             margin: 0, 
-            fontSize: 16,
+            fontSize: 'var(--font-size-base)',
+            fontFamily: 'var(--font-secondary)',
+            lineHeight: 'var(--line-height-normal)',
             ...getTextStyles('secondary')
           }}>
             {getText('stayUpdated')}
@@ -260,7 +271,7 @@ function Alerts() {
 
           {metroAlerts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 20, opacity: 0.8 }}>
-              <span style={{ fontSize: 32, marginBottom: 8, display: 'block', fontWeight: 'bold', color: '#4caf50' }}>✓</span>
+              <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 32, marginBottom: 8, display: 'block', color: '#4caf50' }} />
               <p>All metro services running normally</p>
             </div>
           ) : (
@@ -511,10 +522,12 @@ function Alerts() {
             >
               {loading ? (
                 <>
+                  <FontAwesomeIcon icon={faSync} spin style={{ marginRight: 8 }} />
                   Loading...
                 </>
               ) : (
                 <>
+                  <FontAwesomeIcon icon={faRefresh} style={{ marginRight: 8 }} />
                   Refresh
                 </>
               )}
@@ -523,7 +536,7 @@ function Alerts() {
           
           {alerts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
-              <span style={{ fontSize: 32, marginBottom: 16, opacity: 0.5, display: 'block' }}>!</span>
+              <FontAwesomeIcon icon={faExclamationTriangle} style={{ fontSize: 32, marginBottom: 16, opacity: 0.5, display: 'block' }} />
               <p>No community alerts yet. Be the first to report an issue!</p>
             </div>
           ) : (

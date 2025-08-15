@@ -1,4 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faSun,
+  faMoon,
+  faEye,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
 
@@ -87,9 +94,9 @@ function Settings() {
   };
 
   const themeOptions = [
-    { value: 'light', label: getText('lightTheme'), icon: '☀️' },
-    { value: 'dark', label: getText('darkTheme'), icon: '🌙' },
-    { value: 'high-contrast', label: getText('highContrastTheme'), icon: '🔳' }
+    { value: 'light', label: getText('lightTheme'), icon: faSun },
+    { value: 'dark', label: getText('darkTheme'), icon: faMoon },
+    { value: 'high-contrast', label: getText('highContrastTheme'), icon: faEye }
   ];
 
   const languageOptions = [
@@ -220,7 +227,9 @@ function Settings() {
         flex: 1
       }}
     >
-      <span style={{ fontSize: 20 }}>{option.icon}</span>
+      <span style={{ fontSize: 20 }}>
+        <FontAwesomeIcon icon={option.icon} />
+      </span>
       <span>{option.label}</span>
     </button>
   );
@@ -248,15 +257,19 @@ function Settings() {
         <header style={{ marginBottom: 32, textAlign: 'center' }}>
           <h1 style={{
             margin: '0 0 8px 0',
-            fontSize: 32,
-            fontWeight: 700,
+            fontSize: 'var(--font-size-4xl)',
+            fontWeight: 'var(--font-weight-extrabold)',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: 'var(--letter-spacing-tight)',
             ...getTextStyles('primary')
           }}>
             {getText('settings')}
           </h1>
           <p style={{
             margin: 0,
-            fontSize: 16,
+            fontSize: 'var(--font-size-base)',
+            fontFamily: 'var(--font-secondary)',
+            lineHeight: 'var(--line-height-normal)',
             ...getTextStyles('secondary')
           }}>
             {getText('customizeExperience')}
@@ -440,7 +453,7 @@ function Settings() {
                 gap: 12
               }}
             >
-              <span>🗑️</span>
+              <FontAwesomeIcon icon={faTrash} />
               {getText('clearAllData')}
             </button>
           </div>

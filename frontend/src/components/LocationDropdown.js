@@ -1,4 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faShoppingBag,
+  faMapMarkerAlt,
+  faUniversity,
+  faHome,
+  faUmbrellaBeach,
+  faLocationArrow
+} from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import LocationService from '../services/LocationService';
 
@@ -137,17 +146,17 @@ const LocationDropdown = ({
 
   const getCategoryIcon = (category) => {
     const icons = {
-      'Metro Station': '🚇',
-      'Shopping Area': '🛍️',
-      'Hospital': '🏥',
-      'Educational Institution': '🎓',
-      'IT Park': '🏢',
-      'Tourist Spot': '🏛️',
-      'Transport Hub': '🚂',
-      'Popular Area': '🏘️',
-      'Beach': '🏖️'
+      'Metro Station': faMapMarkerAlt,
+      'Shopping Area': faShoppingBag,
+      'Hospital': faMapMarkerAlt,
+      'Educational Institution': faUniversity,
+      'IT Park': faHome,
+      'Tourist Spot': faUniversity,
+      'Transport Hub': faMapMarkerAlt,
+      'Popular Area': faHome,
+      'Beach': faUmbrellaBeach
     };
-    return icons[category] || '📍';
+    return icons[category] || faMapMarkerAlt;
   };
 
   return (
@@ -209,7 +218,7 @@ const LocationDropdown = ({
           }}
           title="Use current location"
         >
-          {gpsLoading ? '...' : '📍'}
+          {gpsLoading ? '...' : <FontAwesomeIcon icon={faLocationArrow} />}
         </button>
       )}
 
@@ -266,7 +275,7 @@ const LocationDropdown = ({
                 }
               }}
             >
-              <span style={{ fontSize: 16 }}>📍</span>
+              <FontAwesomeIcon icon={faMapMarkerAlt} style={{ fontSize: 16 }} />
               <div>
                 <div style={{ fontSize: 14, fontWeight: 500, ...getTextStyles('primary') }}>
                   {gpsLoading ? 'Getting location...' : 'Use Current Location'}
@@ -300,7 +309,7 @@ const LocationDropdown = ({
               }}
             >
               <span style={{ fontSize: 16 }}>
-                {getCategoryIcon(location.category)}
+                <FontAwesomeIcon icon={getCategoryIcon(location.category)} />
               </span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 14, fontWeight: 500, ...getTextStyles('primary') }}>

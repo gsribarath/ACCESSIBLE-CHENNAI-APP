@@ -6,6 +6,7 @@ import Navigation from '../components/Navigation';
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -44,6 +45,13 @@ function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    // Validate password confirmation for registration
+    if (isRegister && password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    
     const prefs = JSON.parse(localStorage.getItem('ac_prefs') || '{}');
     try {
       const res = await fetch(`/api/${isRegister ? 'register' : 'login'}`, {
@@ -82,7 +90,17 @@ function Login() {
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)' }}>
       <Navigation showBottomNav={false} />
       
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 64px)', padding: '20px' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: 'calc(100vh - 64px)', 
+        padding: '20px',
+        boxSizing: 'border-box',
+        maxWidth: '100%',
+        margin: '0 auto'
+      }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{
             width: 80,
@@ -104,10 +122,22 @@ function Login() {
               AC
             </span>
           </div>
-          <h2 style={{ color: '#333', fontSize: 24, fontWeight: 600, margin: 0 }}>
+          <h2 style={{ 
+            color: '#333', 
+            fontSize: 'var(--font-size-2xl)', 
+            fontWeight: 'var(--font-weight-semibold)',
+            fontFamily: 'var(--font-heading)',
+            letterSpacing: 'var(--letter-spacing-tight)',
+            margin: 0 
+          }}>
             {isRegister ? 'Create Account' : 'Welcome Back'}
           </h2>
-          <p style={{ color: '#666', fontSize: 14, margin: '8px 0 0 0' }}>
+          <p style={{ 
+            color: '#666', 
+            fontSize: 'var(--font-size-sm)', 
+            fontFamily: 'var(--font-secondary)',
+            margin: '8px 0 0 0' 
+          }}>
             {isRegister ? 'Join our accessible community' : 'Sign in to continue your journey'}
           </p>
         </div>
@@ -119,11 +149,20 @@ function Login() {
           borderRadius: 16, 
           background: '#fff', 
           boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-          border: '1px solid rgba(255,255,255,0.2)'
+          border: '1px solid rgba(255,255,255,0.2)',
+          boxSizing: 'border-box'
         }}>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} style={{ width: '100%' }}>
             <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: 8, 
+                color: '#333', 
+                fontSize: 'var(--font-size-sm)', 
+                fontWeight: 'var(--font-weight-medium)',
+                fontFamily: 'var(--font-ui)',
+                letterSpacing: 'var(--letter-spacing-wide)'
+              }}>
                 Email Address
               </label>
               <input 
@@ -137,10 +176,12 @@ function Login() {
                   padding: '12px 16px', 
                   border: '2px solid #e0e0e0',
                   borderRadius: 12,
-                  fontSize: 16,
+                  fontSize: 'var(--font-size-base)',
+                  fontFamily: 'var(--font-primary)',
                   transition: 'all 0.2s',
                   outline: 'none',
-                  background: '#fafafa'
+                  background: '#fafafa',
+                  boxSizing: 'border-box'
                 }}
                 onFocus={e => {
                   e.target.style.borderColor = '#1976d2';
@@ -154,7 +195,15 @@ function Login() {
             </div>
             
             <div style={{ marginBottom: 24 }}>
-              <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
+              <label style={{ 
+                display: 'block', 
+                marginBottom: 8, 
+                color: '#333', 
+                fontSize: 'var(--font-size-sm)', 
+                fontWeight: 'var(--font-weight-medium)',
+                fontFamily: 'var(--font-ui)',
+                letterSpacing: 'var(--letter-spacing-wide)'
+              }}>
                 Password
               </label>
               <input 
@@ -168,10 +217,12 @@ function Login() {
                   padding: '12px 16px', 
                   border: '2px solid #e0e0e0',
                   borderRadius: 12,
-                  fontSize: 16,
+                  fontSize: 'var(--font-size-base)',
+                  fontFamily: 'var(--font-primary)',
                   transition: 'all 0.2s',
                   outline: 'none',
-                  background: '#fafafa'
+                  background: '#fafafa',
+                  boxSizing: 'border-box'
                 }}
                 onFocus={e => {
                   e.target.style.borderColor = '#1976d2';
@@ -184,6 +235,63 @@ function Login() {
               />
             </div>
 
+            {isRegister && (
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ 
+                  display: 'block', 
+                  marginBottom: 8, 
+                  color: '#333', 
+                  fontSize: 'var(--font-size-sm)', 
+                  fontWeight: 'var(--font-weight-medium)',
+                  fontFamily: 'var(--font-ui)',
+                  letterSpacing: 'var(--letter-spacing-wide)'
+                }}>
+                  Confirm Password
+                </label>
+                <input 
+                  type="password" 
+                  placeholder="Confirm your password" 
+                  value={confirmPassword} 
+                  onChange={e => setConfirmPassword(e.target.value)} 
+                  required 
+                  style={{ 
+                    width: '100%', 
+                    padding: '12px 16px', 
+                    border: `2px solid ${password && confirmPassword && password !== confirmPassword ? '#d32f2f' : '#e0e0e0'}`,
+                    borderRadius: 12,
+                    fontSize: 'var(--font-size-base)',
+                    fontFamily: 'var(--font-primary)',
+                    transition: 'all 0.2s',
+                    outline: 'none',
+                    background: '#fafafa',
+                    boxSizing: 'border-box'
+                  }}
+                  onFocus={e => {
+                    e.target.style.borderColor = '#1976d2';
+                    e.target.style.background = '#fff';
+                  }}
+                  onBlur={e => {
+                    if (password && confirmPassword && password !== confirmPassword) {
+                      e.target.style.borderColor = '#d32f2f';
+                    } else {
+                      e.target.style.borderColor = '#e0e0e0';
+                    }
+                    e.target.style.background = '#fafafa';
+                  }}
+                />
+                {password && confirmPassword && password !== confirmPassword && (
+                  <div style={{ 
+                    color: '#d32f2f', 
+                    fontSize: 'var(--font-size-xs)', 
+                    marginTop: '4px',
+                    fontFamily: 'var(--font-ui)'
+                  }}>
+                    Passwords do not match
+                  </div>
+                )}
+              </div>
+            )}
+
             <button 
               type="submit" 
               style={{ 
@@ -193,11 +301,14 @@ function Login() {
                 border: 'none', 
                 borderRadius: 12, 
                 padding: '14px 0', 
-                fontSize: 16,
-                fontWeight: 600,
+                fontSize: 'var(--font-size-base)',
+                fontWeight: 'var(--font-weight-semibold)',
+                fontFamily: 'var(--font-ui)',
+                letterSpacing: 'var(--letter-spacing-wide)',
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                boxShadow: '0 4px 16px rgba(25, 118, 210, 0.3)'
+                boxShadow: '0 4px 16px rgba(25, 118, 210, 0.3)',
+                boxSizing: 'border-box'
               }}
               onMouseOver={e => {
                 e.target.style.transform = 'translateY(-2px)';
@@ -238,14 +349,17 @@ function Login() {
               border: '2px solid #e0e0e0', 
               borderRadius: 12, 
               padding: '12px 0', 
-              fontSize: 16,
-              fontWeight: 500,
+              fontSize: 'var(--font-size-base)',
+              fontWeight: 'var(--font-weight-medium)',
+              fontFamily: 'var(--font-ui)',
+              letterSpacing: 'var(--letter-spacing-normal)',
               cursor: 'pointer',
               transition: 'all 0.2s',
+              boxSizing: 'border-box',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 12,
+              gap: '8px',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}
             onMouseOver={e => {
@@ -270,15 +384,29 @@ function Login() {
 
           <div style={{ marginTop: 20, textAlign: 'center' }}>
             <button 
-              onClick={() => setIsRegister(!isRegister)} 
+              onClick={() => {
+                setIsRegister(!isRegister);
+                setConfirmPassword('');
+                setError('');
+              }} 
               style={{ 
                 background: 'none', 
                 border: 'none', 
                 color: '#1976d2', 
                 cursor: 'pointer',
-                fontSize: 14,
-                fontWeight: 500,
-                textDecoration: 'underline'
+                fontSize: 'var(--font-size-sm)',
+                fontWeight: 'var(--font-weight-medium)',
+                fontFamily: 'var(--font-ui)',
+                textDecoration: 'underline',
+                padding: '8px',
+                borderRadius: '4px',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => {
+                e.target.style.backgroundColor = 'rgba(25, 118, 210, 0.1)';
+              }}
+              onMouseOut={e => {
+                e.target.style.backgroundColor = 'transparent';
               }}
             >
               {isRegister ? 'Already have an account? Sign In' : 'Need an account? Create One'}

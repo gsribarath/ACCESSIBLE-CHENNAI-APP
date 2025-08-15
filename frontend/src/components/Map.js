@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMap } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 
 // Interactive Map Component
@@ -210,11 +212,21 @@ const InteractiveMapComponent = ({
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 12, fontWeight: 600, ...getTextStyles('primary') }}>
+            <div style={{ 
+              fontSize: 'var(--font-size-xs)', 
+              fontWeight: 'var(--font-weight-semibold)',
+              fontFamily: 'var(--font-ui)',
+              ...getTextStyles('primary') 
+            }}>
               {(typeof fromLocation === 'string' ? fromLocation : fromLocation?.name) || 'Start'} → {(typeof toLocation === 'string' ? toLocation : toLocation?.name) || 'Destination'}
             </div>
             {currentRoute && (
-              <div style={{ fontSize: 10, ...getTextStyles('secondary'), marginTop: 2 }}>
+              <div style={{ 
+                fontSize: 'var(--font-size-xs)', 
+                fontFamily: 'var(--font-secondary)',
+                ...getTextStyles('secondary'), 
+                marginTop: 2 
+              }}>
                 {currentRoute.distance} • Accessibility: {currentRoute.accessibilityScore || 85}%
               </div>
             )}
@@ -275,7 +287,7 @@ function Map({
         justifyContent: 'space-between'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 16 }}>🗺️</span>
+          <FontAwesomeIcon icon={faMap} style={{ fontSize: 16 }} />
           <span style={{ fontSize: 14, fontWeight: 600, ...getTextStyles('primary') }}>
             Interactive Route Map
           </span>
