@@ -5,10 +5,12 @@ import {
   faExclamationTriangle,
   faMapMarkerAlt,
   faLocationArrow,
-  faEdit
+  faEdit,
+  faMicrophone
 } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
+import { useVoiceInterface } from '../utils/voiceUtils';
 
 function Community() {
   const [user, setUser] = useState(null);
@@ -25,7 +27,17 @@ function Community() {
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
 
-  const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
+  const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
+  const isVoiceMode = preferences.mode === 'voice';
+
+  // Voice interface
+  const {
+    isListening,
+    voiceFeedback,
+    speak,
+    setupSpeechRecognition,
+    startListening
+  } = useVoiceInterface();
 
   // Comprehensive list of Chennai places
   const chennaiPlaces = [
@@ -172,6 +184,49 @@ function Community() {
       setPosts(generateMockPosts());
     }
   }, [navigate]);
+
+  // Voice command setup
+  useEffect(() => {
+    if (isVoiceMode && speak) {
+      speak(getText('welcomeToCommunity', 'Welcome to Community page. You can say: post, filter, home, back, or help'));
+
+      if (setupSpeechRecognition) {
+        setupSpeechRecognition((command) => {
+          const cleanCommand = command.toLowerCase().trim();
+          
+          if (cleanCommand.includes('home') || cleanCommand.includes('மुகப்பு')) {
+            speak(getText('goingHome', 'Going to Home'));
+            navigate('/');
+          } else if (cleanCommand.includes('back') || cleanCommand.includes('திरும்பு')) {
+            speak(getText('goingBack', 'Going back'));
+            navigate(-1);
+          } else if (cleanCommand.includes('post') || cleanCommand.includes('புதிய')) {
+            speak(getText('createPost', 'Creating new post'));
+            document.querySelector('textarea')?.focus();
+          } else if (cleanCommand.includes('filter') || cleanCommand.includes('வடிகட்டு')) {
+            speak(getText('changeFilter', 'Changing filter'));
+            const filterSelect = document.querySelector('select');
+            if (filterSelect) filterSelect.focus();
+          } else if (cleanCommand.includes('general') || cleanCommand.includes('பொது')) {
+            setFilterCategory('general');
+            speak(getText('showingGeneral', 'Showing general posts'));
+          } else if (cleanCommand.includes('access') || cleanCommand.includes('அணुகல்')) {
+            setFilterCategory('accessibility');
+            speak(getText('showingAccessibility', 'Showing accessibility posts'));
+          } else if (cleanCommand.includes('emergency') || cleanCommand.includes('அவசर')) {
+            setFilterCategory('emergency');
+            speak(getText('showingEmergency', 'Showing emergency posts'));
+          } else if (cleanCommand.includes('help') || cleanCommand.includes('உதவி')) {
+            speak(getText('communityHelp', 'Community page. Say: post to create new post, filter to change category, general for general posts, access for accessibility posts, emergency for emergency posts, home to go to home page, or back to go back'));
+          }
+        });
+
+        setTimeout(() => {
+          startListening();
+        }, 1000);
+      }
+    }
+  }, [navigate, isVoiceMode, speak, setupSpeechRecognition, startListening]);
 
   const handleLogout = () => {
     localStorage.removeItem('ac_user');
@@ -382,16 +437,35 @@ function Community() {
           borderRadius: 16, 
           marginBottom: 24
         }}>
-          <h1 style={{ 
-            margin: '0 0 8px 0', 
-            fontSize: 'var(--font-size-3xl)', 
-            fontWeight: 'var(--font-weight-bold)',
-            fontFamily: 'var(--font-heading)',
-            letterSpacing: 'var(--letter-spacing-tight)',
-            ...getTextStyles('primary')
-          }}>
-            Community Feed
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
+            <h1 style={{ 
+              margin: '0', 
+              fontSize: 'var(--font-size-3xl)', 
+              fontWeight: 'var(--font-weight-bold)',
+              fontFamily: 'var(--font-heading)',
+              letterSpacing: 'var(--letter-spacing-tight)',
+              ...getTextStyles('primary')
+            }}>
+              Community Feed
+            </h1>
+            {isVoiceMode && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                backgroundColor: isListening ? '#4caf50' : '#2196f3',
+                color: 'white',
+                borderRadius: '20px',
+                fontSize: '14px',
+                fontWeight: '500',
+                animation: isListening ? 'pulse 2s infinite' : 'none'
+              }}>
+                <FontAwesomeIcon icon={faMicrophone} />
+                {isListening ? 'Listening...' : 'Voice Ready'}
+              </div>
+            )}
+          </div>
           <p style={{ 
             margin: 0, 
             fontSize: 'var(--font-size-base)',
@@ -401,6 +475,19 @@ function Community() {
           }}>
             Connect, share experiences, and help each other navigate Chennai accessibly
           </p>
+          {isVoiceMode && voiceFeedback && (
+            <div style={{
+              margin: '12px 0',
+              padding: '8px 16px',
+              backgroundColor: '#e3f2fd',
+              border: '1px solid #2196f3',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: '#1976d2'
+            }}>
+              {voiceFeedback}
+            </div>
+          )}
         </section>
 
         {/* Two-column layout on desktop */}

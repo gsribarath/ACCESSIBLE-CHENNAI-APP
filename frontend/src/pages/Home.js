@@ -8,10 +8,12 @@ import {
   faUsers, 
   faCog,
   faPhoneAlt,
-  faCircle
+  faCircle,
+  faMicrophone
 } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
+import { useVoiceInterface } from '../utils/voiceUtils';
 
 function Home() {
   const [user, setUser] = useState(null);
@@ -20,6 +22,17 @@ function Home() {
   const navigate = useNavigate();
 
   const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText, preferences } = usePreferences();
+  
+  // Voice interface setup
+  const {
+    isListening,
+    voiceFeedback,
+    speak,
+    setupSpeechRecognition,
+    startListening,
+    stopListening,
+    isVoiceMode
+  } = useVoiceInterface(preferences, getText);
 
   useEffect(() => {
     const userData = localStorage.getItem('ac_user');
@@ -41,7 +54,57 @@ function Home() {
     if (hour < 12) setGreeting(getText('goodMorning'));
     else if (hour < 18) setGreeting(getText('goodAfternoon'));
     else setGreeting(getText('goodEvening'));
-  }, [navigate, getText]);
+
+    // Setup voice commands for voice mode
+    if (isVoiceMode) {
+      const commands = getVoiceCommands(preferences.language);
+      
+      const commandHandlers = {
+        // Simple navigation commands
+        'home': () => {
+          speak('Already on home page');
+        },
+        'map|navigate': () => {
+          speak('Going to map');
+          navigate('/navigate');
+        },
+        'alerts': () => {
+          speak('Going to alerts');
+          navigate('/alerts');
+        },
+        'community': () => {
+          speak('Going to community');
+          navigate('/community');
+        },
+        'settings': () => {
+          speak('Going to settings');
+          navigate('/settings');
+        },
+        'logout|exit': () => {
+          speak('Logging out');
+          handleLogout();
+        },
+        'emergency|help|911': () => {
+          speak('Emergency assistance activated. Calling 911');
+          window.location.href = 'tel:911';
+        },
+        'commands|help|what can i do': () => {
+          const helpText = `Available commands: Map, Alerts, Community, Settings, Emergency, or Logout`;
+          speak(helpText);
+        }
+      };
+      
+      setupSpeechRecognition(commandHandlers);
+      
+      // Simple welcome message for voice mode
+      setTimeout(() => {
+        const welcomeMessage = `${greeting}! Welcome to Accessible Chennai. Say: Map, Alerts, Community, Settings, or Emergency.`;
+        speak(welcomeMessage).then(() => {
+          startListening();
+        });
+      }, 1000);
+    }
+  }, [navigate, getText, isVoiceMode, preferences.language, speak, setupSpeechRecognition, startListening, greeting]);
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
@@ -173,6 +236,35 @@ function Home() {
   return (
     <div style={{ ...getThemeStyles(), paddingBottom: 80, position: 'relative' }}>
       <Navigation user={user} onLogout={handleLogout} />
+
+      {/* Voice Mode Indicator */}
+      {isVoiceMode && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          zIndex: 1000,
+          background: isListening ? 'var(--accent-color)' : 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '25px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '14px',
+          fontWeight: '500',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          transition: 'all 0.3s'
+        }}>
+          <FontAwesomeIcon 
+            icon={faMicrophone} 
+            style={{
+              animation: isListening ? 'pulse 1s infinite' : 'none'
+            }}
+          />
+          <span>{voiceFeedback || (isListening ? 'Listening...' : 'Voice Mode Active')}</span>
+        </div>
+      )}
 
       {/* Main Content */}
       <main style={{ padding: '20px', maxWidth: 1200, margin: '0 auto', position: 'relative', zIndex: 1 }}>
@@ -638,6 +730,17 @@ function Home() {
           50% { 
             transform: translateX(10px); 
             opacity: 1;
+          }
+        }
+        
+        @keyframes pulse {
+          0%, 100% { 
+            transform: scale(1); 
+            opacity: 1;
+          }
+          50% { 
+            transform: scale(1.1); 
+            opacity: 0.8;
           }
         }
         

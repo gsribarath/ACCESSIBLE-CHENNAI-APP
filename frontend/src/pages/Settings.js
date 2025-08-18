@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faSun,
   faMoon,
   faEye,
-  faTrash
+  faTrash,
+  faMicrophone
 } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
+import { useVoiceInterface } from '../utils/voiceUtils';
 
 function Settings() {
   const [user, setUser] = useState(null);
@@ -24,6 +26,8 @@ function Settings() {
     publicProfile: false
   });
 
+  const speakTimeoutRef = useRef(null);
+
   const { 
     preferences,
     updatePreferences,
@@ -35,6 +39,15 @@ function Settings() {
   } = usePreferences();
 
   const { theme, language, mode: interactionMode } = preferences;
+
+  // Voice interface
+  const {
+    isListening,
+    voiceFeedback,
+    speak,
+    setupSpeechRecognition,
+    startListening
+  } = useVoiceInterface();
 
   useEffect(() => {
     const userData = localStorage.getItem('ac_user');
@@ -52,7 +65,48 @@ function Settings() {
     if (savedPrivacy) {
       setPrivacy(JSON.parse(savedPrivacy));
     }
-  }, []);
+
+    // Setup speech recognition for voice mode
+    if (interactionMode === 'voice' && speak) {
+      speak(getText('welcomeToSettings', 'Welcome to Settings. You can say: voice mode, normal mode, light theme, dark theme, home, or help'));
+
+      if (setupSpeechRecognition) {
+        setupSpeechRecognition((command) => {
+          const cleanCommand = command.toLowerCase().trim();
+          
+          if (cleanCommand.includes('voice') && cleanCommand.includes('mode')) {
+            updatePreferences({ mode: 'voice' });
+            speak(getText('voiceModeSelected', 'Voice mode selected'));
+          } else if ((cleanCommand.includes('normal') || cleanCommand.includes('touch')) && cleanCommand.includes('mode')) {
+            updatePreferences({ mode: 'normal' });
+            speak(getText('normalModeSelected', 'Normal mode selected'));
+          } else if (cleanCommand.includes('light') && cleanCommand.includes('theme')) {
+            updatePreferences({ theme: 'light' });
+            speak('Light theme selected');
+          } else if (cleanCommand.includes('dark') && cleanCommand.includes('theme')) {
+            updatePreferences({ theme: 'dark' });
+            speak('Dark theme selected');
+          } else if (cleanCommand.includes('home') || cleanCommand.includes('முகப்பு')) {
+            speak(getText('goingHome', 'Going to Home'));
+            window.location.href = '/';
+          } else if (cleanCommand.includes('help') || cleanCommand.includes('உதவி')) {
+            speak(getText('settingsHelp', 'Settings page. Say: voice mode to enable voice interaction, normal mode for touch, light theme or dark theme to change appearance, home to go to home page'));
+          }
+        });
+
+        setTimeout(() => {
+          startListening();
+        }, 1000);
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (speakTimeoutRef.current) {
+        clearTimeout(speakTimeoutRef.current);
+      }
+    };
+  }, [interactionMode, speak, setupSpeechRecognition, startListening, updatePreferences, getText]);
 
   const handleLogout = () => {
     localStorage.removeItem('ac_user');
@@ -108,6 +162,67 @@ function Settings() {
     { value: 'normal', label: getText('normalMode'), icon: '👆' },
     { value: 'voice', label: getText('voiceMode'), icon: '🎤' }
   ];
+
+  const VoiceActivationButton = () => {
+    if (interactionMode !== 'voice') return null;
+    
+    return (
+      <div style={{ marginBottom: 20 }}>
+        <button
+          onClick={() => {
+            speak(getText('pleaseSpeak'));
+            setVoiceFeedback(getText('pleaseSpeak'));
+            startListening();
+          }}
+          style={{
+            ...getButtonStyles(isListening ? 'primary' : 'ghost'),
+            padding: '12px 20px',
+            borderRadius: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            width: '100%',
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          {isListening && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '120%',
+              height: '120%',
+              borderRadius: '50%',
+              transform: 'translate(-50%, -50%)',
+              animation: 'pulse 1.5s infinite',
+              background: 'rgba(255, 255, 255, 0.2)',
+              zIndex: 0
+            }} />
+          )}
+          <FontAwesomeIcon icon={faMicrophone} style={{ position: 'relative', zIndex: 1 }} />
+          <span style={{ position: 'relative', zIndex: 1 }}>
+            {isListening ? getText('listening') : getText('activateVoice')}
+          </span>
+        </button>
+        
+        {voiceFeedback && (
+          <div style={{
+            marginTop: 12,
+            padding: 12,
+            borderRadius: 8,
+            background: 'rgba(0, 0, 0, 0.05)',
+            textAlign: 'center',
+            fontSize: 14,
+            color: 'var(--text-primary)'
+          }}>
+            {voiceFeedback}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const SettingCard = ({ title, children, description }) => (
     <div style={{
@@ -255,16 +370,35 @@ function Settings() {
 
       <main style={{ padding: '20px', maxWidth: 800, margin: '0 auto' }}>
         <header style={{ marginBottom: 32, textAlign: 'center' }}>
-          <h1 style={{
-            margin: '0 0 8px 0',
-            fontSize: 'var(--font-size-4xl)',
-            fontWeight: 'var(--font-weight-extrabold)',
-            fontFamily: 'var(--font-heading)',
-            letterSpacing: 'var(--letter-spacing-tight)',
-            ...getTextStyles('primary')
-          }}>
-            {getText('settings')}
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
+            <h1 style={{
+              margin: '0',
+              fontSize: 'var(--font-size-4xl)',
+              fontWeight: 'var(--font-weight-extrabold)',
+              fontFamily: 'var(--font-heading)',
+              letterSpacing: 'var(--letter-spacing-tight)',
+              ...getTextStyles('primary')
+            }}>
+              {getText('settings')}
+            </h1>
+            {interactionMode === 'voice' && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                backgroundColor: isListening ? '#4caf50' : '#2196f3',
+                color: 'white',
+                borderRadius: '20px',
+                fontSize: '14px',
+                fontWeight: '500',
+                animation: isListening ? 'pulse 2s infinite' : 'none'
+              }}>
+                <FontAwesomeIcon icon={faMicrophone} />
+                {isListening ? 'Listening...' : 'Voice Ready'}
+              </div>
+            )}
+          </div>
           <p style={{
             margin: 0,
             fontSize: 'var(--font-size-base)',
@@ -274,6 +408,19 @@ function Settings() {
           }}>
             {getText('customizeExperience')}
           </p>
+          {interactionMode === 'voice' && voiceFeedback && (
+            <div style={{
+              margin: '12px 0',
+              padding: '8px 16px',
+              backgroundColor: '#e3f2fd',
+              border: '1px solid #2196f3',
+              borderRadius: '8px',
+              fontSize: '14px',
+              color: '#1976d2'
+            }}>
+              {voiceFeedback}
+            </div>
+          )}
         </header>
 
         {/* Success Message */}
@@ -332,13 +479,21 @@ function Settings() {
           title={getText('interactionMode')} 
           description={getText('chooseInputMethod')}
         >
+          <VoiceActivationButton />
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             {modeOptions.map(option => (
               <OptionButton
                 key={option.value}
                 value={option.value}
                 current={interactionMode}
-                onChange={(val) => updatePreferences({ mode: val })}
+                onChange={(val) => {
+                  updatePreferences({ mode: val });
+                  if (val === 'voice') {
+                    speak(getText('voiceModeSelected'));
+                  } else {
+                    speak(getText('normalModeSelected'));
+                  }
+                }}
                 option={option}
               />
             ))}
@@ -507,6 +662,25 @@ function Settings() {
           </div>
         </SettingCard>
       </main>
+      
+      {/* Global animations for voice mode */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.5);
+            }
+            50% {
+              opacity: 0.3;
+            }
+            100% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(1.2);
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }

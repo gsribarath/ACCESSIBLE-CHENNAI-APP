@@ -19,22 +19,56 @@ export const PreferencesProvider = ({ children }) => {
 
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Load preferences from localStorage on mount
+  // Load preferences from localStorage and server on mount
   useEffect(() => {
-    const savedPrefs = localStorage.getItem('ac_prefs');
-    if (savedPrefs) {
-      try {
-        const parsed = JSON.parse(savedPrefs);
-        setPreferences({
-          language: parsed.language || 'en',
-          theme: parsed.theme || 'light',
-          mode: parsed.mode || 'normal'
-        });
-      } catch (error) {
-        console.error('Error parsing preferences:', error);
+    const loadPreferences = async () => {
+      // First load from localStorage
+      const savedPrefs = localStorage.getItem('ac_prefs');
+      let localPrefs = {
+        language: 'en',
+        theme: 'light',
+        mode: 'normal'
+      };
+      
+      if (savedPrefs) {
+        try {
+          const parsed = JSON.parse(savedPrefs);
+          localPrefs = {
+            language: parsed.language || 'en',
+            theme: parsed.theme || 'light',
+            mode: parsed.mode || 'normal'
+          };
+        } catch (error) {
+          console.error('Error parsing preferences:', error);
+        }
       }
-    }
-    setIsLoaded(true);
+      
+      // Check if user is logged in and try to load server preferences
+      const userData = JSON.parse(localStorage.getItem('ac_user') || '{}');
+      if (userData && userData.user_id) {
+        try {
+          const response = await fetch(`/api/user/${userData.user_id}/preferences`);
+          if (response.ok) {
+            const serverPrefs = await response.json();
+            // Merge server preferences with local preferences, server takes priority
+            localPrefs = {
+              ...localPrefs,
+              ...serverPrefs
+            };
+            // Update localStorage with merged preferences
+            localStorage.setItem('ac_prefs', JSON.stringify(localPrefs));
+          }
+        } catch (error) {
+          console.error('Error loading server preferences:', error);
+          // Continue with local preferences
+        }
+      }
+      
+      setPreferences(localPrefs);
+      setIsLoaded(true);
+    };
+    
+    loadPreferences();
   }, []);
 
   // Apply theme to document
@@ -111,10 +145,27 @@ export const PreferencesProvider = ({ children }) => {
 
   }, [preferences, isLoaded]);
 
-  const updatePreferences = (newPrefs) => {
+  const updatePreferences = async (newPrefs) => {
     const updated = { ...preferences, ...newPrefs };
     setPreferences(updated);
     localStorage.setItem('ac_prefs', JSON.stringify(updated));
+    
+    // Also save to server if user is logged in
+    const userData = JSON.parse(localStorage.getItem('ac_user') || '{}');
+    if (userData && userData.user_id) {
+      try {
+        await fetch(`/api/user/${userData.user_id}/preferences`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newPrefs)
+        });
+      } catch (error) {
+        console.error('Error saving preferences to server:', error);
+        // Don't throw error, local save is still successful
+      }
+    }
   };
 
   const getThemeStyles = () => {
@@ -362,7 +413,20 @@ export const PreferencesProvider = ({ children }) => {
         
         // Modes
         normal: 'Touch/Click',
-        voice: 'Voice Mode'
+        voice: 'Voice Mode',
+        
+        // Mode Selection
+        selectMode: 'Select Your Interaction Mode',
+        voiceModeSelected: 'Voice mode selected! You can now use voice commands to navigate.',
+        normalModeSelected: 'Normal mode selected! You can use touch and click to navigate.',
+        pleaseSpeak: 'Please speak your choice: say "Voice Mode" or "Normal Mode"',
+        listening: 'Listening...',
+        didNotUnderstand: 'I didn\'t understand. Please try again.',
+        errorListening: 'Error listening. Please try again.',
+        activateVoice: 'Start Voice Recognition',
+        saving: 'Saving preferences...',
+        errorSavingPreferences: 'Failed to save preferences. Please try again.',
+        continuousListening: 'Voice recognition is active. Say "Voice Mode" or "Normal Mode"'
       },
       ta: {
         // Navigation
@@ -438,7 +502,20 @@ export const PreferencesProvider = ({ children }) => {
         
         // Modes
         normal: 'தொடு/கிளிக்',
-        voice: 'குரல் முறை'
+        voice: 'குரல் முறை',
+        
+        // Mode Selection
+        selectMode: 'உங்கள் தொடர்பு முறையை தேர்ந்தெடுக்கவும்',
+        voiceModeSelected: 'குரல் முறை தேர்ந்தெடுக்கப்பட்டது! இப்போது நீங்கள் குரல் கட்டளைகளைப் பயன்படுத்தலாம்.',
+        normalModeSelected: 'சாதாரண முறை தேர்ந்தெடுக்கப்பட்டது! நீங்கள் தொடுதல் மற்றும் கிளிக் பயன்படுத்தலாம்.',
+        pleaseSpeak: 'தயவுசெய்து உங்கள் விருப்பத்தைச் சொல்லுங்கள்: "குரல் முறை" அல்லது "சாதாரண முறை" என்று சொல்லுங்கள்',
+        listening: 'கேட்கிறது...',
+        didNotUnderstand: 'நான் புரிந்துகொள்ளவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
+        errorListening: 'கேட்பதில் பிழை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
+        activateVoice: 'குரல் அறிதலை தொடங்கு',
+        saving: 'விருப்பங்களை சேமிக்கிறது...',
+        errorSavingPreferences: 'விருப்பங்களை சேமிக்க முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
+        continuousListening: 'குரல் அறிதல் செயலில் உள்ளது. "குரல் முறை" அல்லது "சாதாரண முறை" என்று சொல்லுங்கள்'
       }
     };
 

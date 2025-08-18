@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Accessible Chennai</string>
+    <string name="title_activity_main">Accessible Chennai</string>
+    <string name="package_name">com.accessiblechennai.app</string>
+    <string name="custom_url_scheme">com.accessiblechennai.app</string>
+</resources>

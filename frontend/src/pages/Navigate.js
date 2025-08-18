@@ -7,12 +7,14 @@ import {
   faStop, 
   faCompass,
   faSearch,
-  faTarget
+  faTarget,
+  faMicrophone
 } from '@fortawesome/free-solid-svg-icons';
 import Navigation from '../components/Navigation';
 import Map from '../components/Map';
 import LocationService from '../services/LocationService';
 import { usePreferences } from '../context/PreferencesContext';
+import { useVoiceInterface } from '../utils/voiceUtils';
 
 const Navigate = () => {
   const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles } = usePreferences();
@@ -26,10 +28,22 @@ const Navigate = () => {
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState({ from: [], to: [] });
   const [activeInput, setActiveInput] = useState(null);
+  const [voiceInputMode, setVoiceInputMode] = useState(null); // 'from', 'to', or null
   const fromInputRef = useRef(null);
   const toInputRef = useRef(null);
   const fromSuggestionsRef = useRef(null);
   const toSuggestionsRef = useRef(null);
+  
+  // Voice interface setup
+  const {
+    isListening,
+    voiceFeedback,
+    speak,
+    setupSpeechRecognition,
+    startListening,
+    stopListening,
+    isVoiceMode
+  } = useVoiceInterface(preferences, usePreferences().getText);
   
   // Handle click outside to close suggestions
   useEffect(() => {
@@ -50,6 +64,103 @@ const Navigate = () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Voice commands setup
+  useEffect(() => {
+    if (isVoiceMode) {
+      const commandHandlers = {
+        // Simple location commands
+        'from|start': () => {
+          setVoiceInputMode('from');
+          speak('Say your starting location');
+          setFromLocation('');
+          setTimeout(() => {
+            setupLocationVoiceRecognition('from');
+          }, 2000);
+        },
+        'to|destination|go': () => {
+          setVoiceInputMode('to');
+          speak('Say your destination');
+          setToLocation('');
+          setTimeout(() => {
+            setupLocationVoiceRecognition('to');
+          }, 2000);
+        },
+        'search|find|route': () => {
+          if (fromLocation && toLocation) {
+            speak('Finding routes');
+            handleSearch();
+          } else {
+            speak('Please set starting location and destination first');
+          }
+        },
+        'current|here|my location': () => {
+          speak('Using current location');
+          getCurrentLocation();
+        },
+        'clear|reset': () => {
+          speak('Clearing all');
+          setFromLocation('');
+          setToLocation('');
+          setRoutes([]);
+          setSelectedRoute(null);
+        },
+        'back': () => {
+          if (selectedRoute) {
+            speak('Back to routes');
+            setSelectedRoute(null);
+          } else {
+            speak('Going back');
+            window.history.back();
+          }
+        },
+        'home': () => {
+          speak('Going home');
+          navigate('/');
+        },
+        'help|commands': () => {
+          const helpText = `Say: From, To, Search, Current location, Clear, or Back`;
+          speak(helpText);
+        }
+      };
+      
+      setupSpeechRecognition(commandHandlers);
+      
+      // Simple welcome message
+      setTimeout(() => {
+        const welcomeMessage = `Navigation page. Say: From, To, Search, Current location, or Clear.`;
+        speak(welcomeMessage).then(() => {
+          startListening();
+        });
+      }, 1000);
+    }
+  }, [isVoiceMode, preferences.language, fromLocation, toLocation, selectedRoute]);
+
+  // Location voice recognition for input fields
+  const setupLocationVoiceRecognition = (type) => {
+    if (!isVoiceMode) return;
+    
+    const locationHandlers = {
+      '.*': (transcript) => { // Any speech input
+        const location = transcript.trim();
+        if (type === 'from') {
+          setFromLocation(location);
+          speak(`Starting location set to ${location}`);
+        } else {
+          setToLocation(location);
+          speak(`Destination set to ${location}`);
+        }
+        setVoiceInputMode(null);
+        
+        // Resume normal command listening
+        setTimeout(() => {
+          startListening();
+        }, 1000);
+      }
+    };
+    
+    setupSpeechRecognition(locationHandlers);
+  };
 
   const handleLogout = () => {
     console.log('Logout');
@@ -400,6 +511,35 @@ const Navigate = () => {
     <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
       <Navigation user={user} onLogout={handleLogout} />
 
+      {/* Voice Mode Indicator */}
+      {isVoiceMode && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          right: '20px',
+          zIndex: 1000,
+          background: isListening ? 'var(--accent-color)' : 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          padding: '12px 16px',
+          borderRadius: '25px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '14px',
+          fontWeight: '500',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+          transition: 'all 0.3s'
+        }}>
+          <FontAwesomeIcon 
+            icon={faMicrophone} 
+            style={{
+              animation: isListening ? 'pulse 1s infinite' : 'none'
+            }}
+          />
+          <span>{voiceFeedback || (isListening ? 'Listening...' : 'Voice Mode Active')}</span>
+        </div>
+      )}
+
       <main style={{ padding: '20px', maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
         <section style={{ 
@@ -469,42 +609,78 @@ const Navigate = () => {
                 From
               </label>
               <div style={{ position: 'relative', width: '100%' }}>
-                <input
-                  ref={fromInputRef}
-                  type="text"
-                  value={fromLocation}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setFromLocation(value);
-                    const filtered = LocationService.getLocationSuggestions(value);
-                    setSuggestions(prev => ({ ...prev, from: filtered }));
-                    setActiveInput('from');
-                  }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                    const filtered = LocationService.getLocationSuggestions(fromLocation || '');
-                    setSuggestions(prev => ({ ...prev, from: filtered }));
-                    setActiveInput('from');
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveInput('from');
-                  }}
-                  placeholder="Enter starting location"
-                  className="modern-input"
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: '12px',
-                    border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-                    borderRadius: '8px',
-                    fontSize: '14px',
-                    backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                    color: preferences.theme === 'dark' ? '#ffffff' : '#000000',
-                    fontFamily: 'var(--font-ui)',
-                    transition: 'border-color 0.2s ease'
-                  }}
-                />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    ref={fromInputRef}
+                    type="text"
+                    value={fromLocation}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFromLocation(value);
+                      const filtered = LocationService.getLocationSuggestions(value);
+                      setSuggestions(prev => ({ ...prev, from: filtered }));
+                      setActiveInput('from');
+                    }}
+                    onFocus={(e) => {
+                      e.stopPropagation();
+                      const filtered = LocationService.getLocationSuggestions(fromLocation || '');
+                      setSuggestions(prev => ({ ...prev, from: filtered }));
+                      setActiveInput('from');
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveInput('from');
+                    }}
+                    placeholder="Enter starting location"
+                    className="modern-input"
+                    style={{
+                      flex: 1,
+                      boxSizing: 'border-box',
+                      padding: '12px',
+                      border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
+                      color: preferences.theme === 'dark' ? '#ffffff' : '#000000',
+                      fontFamily: 'var(--font-ui)',
+                      transition: 'border-color 0.2s ease'
+                    }}
+                  />
+                  
+                  {isVoiceMode && (
+                    <button
+                      onClick={() => {
+                        setVoiceInputMode('from');
+                        speak('Please say your starting location');
+                        setFromLocation('');
+                        setTimeout(() => {
+                          setupLocationVoiceRecognition('from');
+                        }, 2000);
+                      }}
+                      style={{
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: voiceInputMode === 'from' ? 'var(--accent-color)' : 'rgba(25, 118, 210, 0.1)',
+                        color: voiceInputMode === 'from' ? 'white' : 'var(--accent-color)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '44px',
+                        transition: 'all 0.3s'
+                      }}
+                      title="Voice input for starting location"
+                    >
+                      <FontAwesomeIcon 
+                        icon={faMicrophone} 
+                        style={{
+                          animation: voiceInputMode === 'from' ? 'pulse 1s infinite' : 'none'
+                        }}
+                      />
+                    </button>
+                  )}
+                </div>
                 
                 {suggestions.from.length > 0 && activeInput === 'from' && (
                   <div 
@@ -585,23 +761,24 @@ const Navigate = () => {
                 To
               </label>
               <div style={{ position: 'relative', width: '100%' }}>
-                <input
-                  ref={toInputRef}
-                  type="text"
-                  value={toLocation}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setToLocation(value);
-                    const filtered = LocationService.getLocationSuggestions(value);
-                    setSuggestions(prev => ({ ...prev, to: filtered }));
-                    setActiveInput('to');
-                  }}
-                  onFocus={(e) => {
-                    e.stopPropagation();
-                    const filtered = LocationService.getLocationSuggestions(toLocation || '');
-                    setSuggestions(prev => ({ ...prev, to: filtered }));
-                    setActiveInput('to');
-                  }}
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input
+                    ref={toInputRef}
+                    type="text"
+                    value={toLocation}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setToLocation(value);
+                      const filtered = LocationService.getLocationSuggestions(value);
+                      setSuggestions(prev => ({ ...prev, to: filtered }));
+                      setActiveInput('to');
+                    }}
+                    onFocus={(e) => {
+                      e.stopPropagation();
+                      const filtered = LocationService.getLocationSuggestions(toLocation || '');
+                      setSuggestions(prev => ({ ...prev, to: filtered }));
+                      setActiveInput('to');
+                    }}
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveInput('to');
@@ -609,7 +786,7 @@ const Navigate = () => {
                   placeholder="Enter destination"
                   className="modern-input"
                   style={{
-                    width: '100%',
+                    flex: 1,
                     boxSizing: 'border-box',
                     padding: '12px',
                     border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
@@ -621,6 +798,41 @@ const Navigate = () => {
                     transition: 'border-color 0.2s ease'
                   }}
                 />
+                
+                {isVoiceMode && (
+                  <button
+                    onClick={() => {
+                      setVoiceInputMode('to');
+                      speak('Please say your destination');
+                      setToLocation('');
+                      setTimeout(() => {
+                        setupLocationVoiceRecognition('to');
+                      }, 2000);
+                    }}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: voiceInputMode === 'to' ? 'var(--accent-color)' : 'rgba(25, 118, 210, 0.1)',
+                      color: voiceInputMode === 'to' ? 'white' : 'var(--accent-color)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '44px',
+                      transition: 'all 0.3s'
+                    }}
+                    title="Voice input for destination"
+                  >
+                    <FontAwesomeIcon 
+                      icon={faMicrophone} 
+                      style={{
+                        animation: voiceInputMode === 'to' ? 'pulse 1s infinite' : 'none'
+                      }}
+                    />
+                  </button>
+                )}
+              </div>
                 
                 {suggestions.to.length > 0 && activeInput === 'to' && (
                   <div 

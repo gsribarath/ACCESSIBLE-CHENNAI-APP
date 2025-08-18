@@ -8,8 +8,10 @@ import {
   faExclamationTriangle, 
   faCheckCircle,
   faRefresh,
-  faSync
+  faSync,
+  faMicrophone
 } from '@fortawesome/free-solid-svg-icons';
+import { useVoiceInterface } from '../utils/voiceUtils';
 
 function Alerts() {
   const [user, setUser] = useState(null);
@@ -21,7 +23,18 @@ function Alerts() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
+  const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText, preferences } = usePreferences();
+  
+  // Voice interface setup
+  const {
+    isListening,
+    voiceFeedback,
+    speak,
+    setupSpeechRecognition,
+    startListening,
+    stopListening,
+    isVoiceMode
+  } = useVoiceInterface(preferences, getText);
 
   // Chennai Metro Lines and Stations
   const metroLines = {
@@ -115,6 +128,50 @@ function Alerts() {
       // Generate initial metro alerts
       setMetroAlerts(generateMetroAlerts());
       
+      // Voice commands setup
+      if (isVoiceMode) {
+        const commandHandlers = {
+          'refresh|update': () => {
+            speak('Refreshing alerts');
+            fetchAlerts();
+            setMetroAlerts(generateMetroAlerts());
+          },
+          'report|add|new': () => {
+            speak('Say your alert message');
+            // Could expand this to handle voice input for new alerts
+          },
+          'transport|metro|bus': () => {
+            speak('Transport alerts selected');
+            setCategory('transport');
+          },
+          'accessibility|access': () => {
+            speak('Accessibility alerts selected');
+            setCategory('accessibility');
+          },
+          'emergency': () => {
+            speak('Emergency alerts selected');
+            setCategory('emergency');
+          },
+          'back|home': () => {
+            speak('Going back');
+            navigate('/');
+          },
+          'help|commands': () => {
+            const helpText = `Say: Refresh, Transport, Accessibility, Emergency, or Back`;
+            speak(helpText);
+          }
+        };
+        
+        setupSpeechRecognition(commandHandlers);
+        
+        setTimeout(() => {
+          const welcomeMessage = `Alerts page. Say: Refresh, Transport, Accessibility, Emergency, or Back.`;
+          speak(welcomeMessage).then(() => {
+            startListening();
+          });
+        }, 1000);
+      }
+      
       // Simulate real-time updates every 30 seconds
       const interval = setInterval(() => {
         setMetroAlerts(generateMetroAlerts());
@@ -122,7 +179,7 @@ function Alerts() {
       
       return () => clearInterval(interval);
     }
-  }, [navigate]);
+  }, [navigate, isVoiceMode, speak, setupSpeechRecognition, startListening]);
 
   const fetchAlerts = async () => {
     try {

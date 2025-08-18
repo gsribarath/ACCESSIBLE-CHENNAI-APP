@@ -11,6 +11,7 @@ from google_auth_oauthlib.flow import Flow
 from google.auth.transport import requests as google_requests
 import pathlib
 import requests as ext_requests
+import traceback
 
 load_dotenv()
 
@@ -61,22 +62,32 @@ class Route(db.Model):
 
 def create_app():
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://postgres:Kavin04@localhost/accessible_chennai')
+    # Use SQLite for development - simpler setup
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///accessible_chennai.db'
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
     app.config['SESSION_TYPE'] = 'filesystem'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    # Initialize extensions
+    CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+    db.init_app(app)
+    login_manager = LoginManager()
+    login_manager.init_app(app)
+    
     # GOOGLE OAUTH CONFIG
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-    GOOGLE_DISCOVERY_URL = (
-        "https://accounts.google.com/.well-known/openid-configuration"
-    )
 
     # GOOGLE OAUTH ENDPOINTS
     @app.route('/api/google-auth/login')
     def google_login():
         try:
             if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-                return jsonify({'error': 'Google OAuth not configured'}), 500
+                print("Error: Google OAuth not configured")
+                return redirect('http://localhost:3000/login?error=google_not_configured')
+            
+            # Use the actual host URL from the request
+            redirect_uri = request.url_root + "api/google-auth/callback"
             
             flow = Flow.from_client_config(
                 {
@@ -85,28 +96,34 @@ def create_app():
                         "client_secret": GOOGLE_CLIENT_SECRET,
                         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                         "token_uri": "https://oauth2.googleapis.com/token",
-                        "redirect_uris": [request.host_url + "api/google-auth/callback"]
+                        "redirect_uris": [redirect_uri]
                     }
                 },
                 scopes=["openid", "email", "profile"],
-                redirect_uri=request.host_url + "api/google-auth/callback"
+                redirect_uri=redirect_uri
             )
+            
             authorization_url, state = flow.authorization_url(
                 prompt='consent',
                 access_type='offline',
                 include_granted_scopes='true'
             )
             session['state'] = state
+            print(f"Redirecting to Google OAuth: {authorization_url}")
             return redirect(authorization_url)
         except Exception as e:
             print(f"Google login error: {e}")
-            return redirect(f'http://localhost:3000/login?error=google_auth_failed')
+            return redirect('http://localhost:3000/login?error=google_auth_failed')
 
     @app.route('/api/google-auth/callback')
     def google_callback():
         try:
             if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
-                return redirect(f'http://localhost:3000/login?error=google_not_configured')
+                print("Error: Google OAuth not configured in callback")
+                return redirect('http://localhost:3000/login?error=google_not_configured')
+            
+            # Use the actual host URL from the request
+            redirect_uri = request.url_root + "api/google-auth/callback"
             
             flow = Flow.from_client_config(
                 {
@@ -115,13 +132,14 @@ def create_app():
                         "client_secret": GOOGLE_CLIENT_SECRET,
                         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                         "token_uri": "https://oauth2.googleapis.com/token",
-                        "redirect_uris": [request.host_url + "api/google-auth/callback"]
+                        "redirect_uris": [redirect_uri]
                     }
                 },
                 scopes=["openid", "email", "profile"],
-                redirect_uri=request.host_url + "api/google-auth/callback"
+                redirect_uri=redirect_uri
             )
             
+            print(f"Callback received: {request.url}")
             flow.fetch_token(authorization_response=request.url)
             credentials = flow.credentials
             
@@ -137,36 +155,47 @@ def create_app():
             email = id_info.get('email')
             name = id_info.get('name', '')
             
+            print(f"Google user info: email={email}, google_id={google_id}, name={name}")
+            
             if not email:
-                return redirect(f'http://localhost:3000/login?error=no_email_from_google')
+                print("Error: No email from Google")
+                return redirect('http://localhost:3000/login?error=no_email_from_google')
             
             # Check if user exists or create new user
             user = User.query.filter_by(email=email).first()
+            is_new_user = False
+            
             if not user:
                 user = User(
                     email=email, 
                     google_id=google_id, 
-                    preferences={}, 
+                    preferences={'mode': None},  # Set mode as None for new users
                     saved_places=[]
                 )
                 db.session.add(user)
+                is_new_user = True
+                print(f"Created new user: {email}")
             else:
                 # Update Google ID if not set
                 if not user.google_id:
                     user.google_id = google_id
+                print(f"Updated existing user: {email}")
             
             db.session.commit()
             
             # Redirect to frontend with success
-            return redirect(f'http://localhost:3000/login?google_success=1&user_id={user.id}&email={email}')
+            if is_new_user:
+                success_url = f'http://localhost:3000/login?google_success=1&user_id={user.id}&email={email}'
+            else:
+                success_url = f'http://localhost:3000/login?login_success=1&user_id={user.id}&email={email}'
+            print(f"Redirecting to: {success_url}")
+            return redirect(success_url)
             
         except Exception as e:
             print(f"Google callback error: {e}")
-            return redirect(f'http://localhost:3000/login?error=google_callback_failed')
-    CORS(app)
-    db.init_app(app)
-    login_manager = LoginManager()
-    login_manager.init_app(app)
+            import traceback
+            traceback.print_exc()
+            return redirect('http://localhost:3000/login?error=google_callback_failed')
 
 
     # CLEAR & RE-INIT DB
@@ -182,12 +211,12 @@ def create_app():
         data = request.json
         if User.query.filter_by(email=data['email']).first():
             return {'error': 'Email already registered'}, 400
-        user = User(email=data['email'])
+        user = User(email=data['email'], preferences={'mode': None})  # Set mode as None for new users
         user.set_password(data['password'])
         db.session.add(user)
         db.session.commit()
-        # Return JSON, not redirect
-        return {'message': 'Registration successful', 'user_id': user.id}
+        # Return JSON with register_success flag for new users
+        return {'message': 'Registration successful', 'user_id': user.id, 'is_new_user': True}
 
     @app.route('/api/login', methods=['POST'])
     def login():
@@ -243,11 +272,60 @@ def create_app():
         user = User.query.get(user_id)
         if not user:
             return {'error': 'User not found'}, 404
+            
         if request.method == 'POST':
-            user.preferences = request.json.get('preferences', user.preferences)
+            # Handle preferences directly from the request body
+            preferences_data = request.json
+            
+            # Initialize preferences if they don't exist
+            if not user.preferences:
+                user.preferences = {}
+                
+            # Update preferences with new values
+            if preferences_data:
+                if not isinstance(user.preferences, dict):
+                    # Handle case where preferences might be stored incorrectly
+                    user.preferences = {}
+                    
+                # Update the preferences with the new values
+                user.preferences.update(preferences_data)
+                
             db.session.commit()
-            return {'message': 'Preferences updated'}
-        return jsonify(user.preferences)
+            return {'message': 'Preferences updated', 'preferences': user.preferences}
+        
+        # For GET request, return the user's preferences
+        # If preferences are None, return an empty object
+        return jsonify(user.preferences or {})
+
+    # MODE SELECTION ENDPOINT - specifically for saving mode after login
+    @app.route('/api/user/<int:user_id>/mode', methods=['POST'])
+    def update_user_mode(user_id):
+        user = User.query.get(user_id)
+        if not user:
+            return {'error': 'User not found'}, 404
+            
+        data = request.json
+        mode = data.get('mode')
+        
+        if mode not in ['normal', 'voice']:
+            return {'error': 'Invalid mode. Must be "normal" or "voice"'}, 400
+            
+        # Initialize preferences if they don't exist
+        if not user.preferences:
+            user.preferences = {}
+        elif not isinstance(user.preferences, dict):
+            user.preferences = {}
+            
+        # Update the mode
+        user.preferences['mode'] = mode
+        
+        db.session.commit()
+        
+        return {
+            'message': 'Mode updated successfully', 
+            'mode': mode,
+            'preferences': user.preferences
+        }
 
     @app.route('/')
     def index():

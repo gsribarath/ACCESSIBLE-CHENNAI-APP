@@ -38,7 +38,15 @@ function Login() {
         userData.email = email;
       }
       localStorage.setItem('ac_user', JSON.stringify(userData));
-      window.location.href = '/';
+      
+      // Check if this is a new registration (mode selection needed) or existing user
+      if (params.get('register_success') || params.get('google_success')) {
+        // For new users, redirect to mode selection
+        window.location.href = '/mode-selection';
+      } else {
+        // For existing users, go directly to home
+        window.location.href = '/';
+      }
     }
   }, [location]);
 
@@ -63,8 +71,16 @@ function Login() {
       console.log('Login response:', data, 'Status:', res.status);
       if (res.ok) {
         localStorage.setItem('ac_user', JSON.stringify({ email, user_id: data.user_id }));
-        console.log('Navigating to home...');
-        window.location.href = '/';
+        
+        if (isRegister && data.is_new_user) {
+          // New user registration - go to mode selection
+          console.log('Navigating to mode selection for new user...');
+          window.location.href = '/mode-selection';
+        } else {
+          // Existing user login - go to home
+          console.log('Navigating to home for existing user...');
+          window.location.href = '/';
+        }
       } else {
         setError(data.error || 'Login/Register failed');
       }
