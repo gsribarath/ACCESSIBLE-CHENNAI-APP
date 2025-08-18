@@ -18,10 +18,10 @@ import { useVoiceInterface } from '../utils/voiceUtils';
 function Home() {
   const [user, setUser] = useState(null);
   const [greeting, setGreeting] = useState('');
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const navigate = useNavigate();
 
-  const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText, preferences } = usePreferences();
+  const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
+  const isVoiceMode = preferences.mode === 'voice';
   
   // Voice interface setup
   const {
@@ -30,9 +30,9 @@ function Home() {
     speak,
     setupSpeechRecognition,
     startListening,
-    stopListening,
-    isVoiceMode
-  } = useVoiceInterface(preferences, getText);
+    stopListening
+  } = useVoiceInterface();
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem('ac_user');

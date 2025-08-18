@@ -142,8 +142,7 @@ export const useVoiceInterface = () => {
     speak,
     setupSpeechRecognition,
     startListening,
-    stopListening,
-    isVoiceMode
+    stopListening
   };
 };
 

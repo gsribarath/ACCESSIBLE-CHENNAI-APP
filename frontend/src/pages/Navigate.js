@@ -33,6 +33,7 @@ const Navigate = () => {
   const toInputRef = useRef(null);
   const fromSuggestionsRef = useRef(null);
   const toSuggestionsRef = useRef(null);
+  const isVoiceMode = preferences.mode === 'voice';
   
   // Voice interface setup
   const {
@@ -41,9 +42,8 @@ const Navigate = () => {
     speak,
     setupSpeechRecognition,
     startListening,
-    stopListening,
-    isVoiceMode
-  } = useVoiceInterface(preferences, usePreferences().getText);
+    stopListening
+  } = useVoiceInterface();
   
   // Handle click outside to close suggestions
   useEffect(() => {

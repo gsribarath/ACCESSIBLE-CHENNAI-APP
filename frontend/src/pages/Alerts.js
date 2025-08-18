@@ -24,6 +24,7 @@ function Alerts() {
   const navigate = useNavigate();
 
   const { getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText, preferences } = usePreferences();
+  const isVoiceMode = preferences.mode === 'voice';
   
   // Voice interface setup
   const {
@@ -32,9 +33,8 @@ function Alerts() {
     speak,
     setupSpeechRecognition,
     startListening,
-    stopListening,
-    isVoiceMode
-  } = useVoiceInterface(preferences, getText);
+    stopListening
+  } = useVoiceInterface();
 
   // Chennai Metro Lines and Stations
   const metroLines = {
