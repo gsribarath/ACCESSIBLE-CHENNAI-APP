@@ -370,73 +370,13 @@ const OpenStreetMap = ({
       border: '1px solid var(--border-color)',
       position: 'relative'
     }}>
-      {/* Map Header */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        padding: 12,
-        background: preferences.theme === 'dark' ? 'rgba(0,0,0,0.9)' : 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(10px)',
-        borderBottom: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <FontAwesomeIcon icon={faMap} style={{ fontSize: 16, color: '#2196F3' }} />
-          <span style={{ fontSize: 14, fontWeight: 600, ...getTextStyles('primary') }}>
-            OpenStreetMap Navigation
-          </span>
-          <div style={{
-            background: '#4caf50',
-            color: 'white',
-            padding: '2px 8px',
-            borderRadius: 12,
-            fontSize: 10,
-            fontWeight: 600
-          }}>
-            FREE
-          </div>
-        </div>
-        
-        {/* Travel Mode Selector */}
-        <div style={{ display: 'flex', gap: 4 }}>
-          {['foot', 'driving', 'cycling'].map(mode => (
-            <button
-              key={mode}
-              onClick={() => setTravelMode(mode)}
-              style={{
-                padding: '4px 8px',
-                border: 'none',
-                borderRadius: 6,
-                fontSize: 12,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                background: travelMode === mode ? '#2196F3' : 'transparent',
-                color: travelMode === mode ? 'white' : (preferences.theme === 'dark' ? '#fff' : '#666'),
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <FontAwesomeIcon icon={getTravelModeIcon(mode)} />
-              {getTravelModeLabel(mode)}
-            </button>
-          ))}
-        </div>
-      </div>
-      
       {/* Map Container or Fallback */}
       {window.L ? (
         <div 
           ref={mapRef} 
           style={{ 
             width: '100%', 
-            height: '100%', 
-            paddingTop: '50px'
+            height: '100%'
           }} 
         />
       ) : (
@@ -444,7 +384,6 @@ const OpenStreetMap = ({
         <div style={{
           width: '100%',
           height: '100%',
-          paddingTop: '50px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -474,7 +413,7 @@ const OpenStreetMap = ({
               lineHeight: 1.5,
               ...getTextStyles('secondary')
             }}>
-              Loading free OpenStreetMap. This may take a moment on first visit.
+              Loading map data...
             </p>
             {fromLocation && toLocation && (
               <div style={{
@@ -493,37 +432,6 @@ const OpenStreetMap = ({
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-      
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div style={{
-          position: 'absolute',
-          top: 50,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: preferences.theme === 'dark' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 999
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              border: '3px solid #f3f3f3',
-              borderTop: '3px solid #2196F3',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 12px'
-            }} />
-            <span style={{ fontSize: 14, ...getTextStyles('secondary') }}>
-              Loading route...
-            </span>
           </div>
         </div>
       )}

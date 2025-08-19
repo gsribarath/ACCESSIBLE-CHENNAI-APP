@@ -70,20 +70,8 @@ function Map({
               fontSize: 14,
               ...getTextStyles('secondary')
             }}>
-              Enter your starting location and destination to see the route on our FREE map powered by OpenStreetMap
+              Enter your starting location and destination to see the route
             </p>
-            <div style={{
-              marginTop: 16,
-              padding: '8px 16px',
-              background: '#4caf50',
-              color: 'white',
-              borderRadius: 20,
-              fontSize: 12,
-              fontWeight: 600,
-              display: 'inline-block'
-            }}>
-              🎉 100% FREE - No API Key Required!
-            </div>
           </div>
         </div>
       )}

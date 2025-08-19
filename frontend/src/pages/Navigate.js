@@ -1,24 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faMap, 
   faMapMarkerAlt, 
   faPlay, 
   faStop, 
   faCompass,
   faSearch,
   faTarget,
-  faMicrophone
+  faMicrophone,
+  faTrain,
+  faCar,
+  faBus
 } from '@fortawesome/free-solid-svg-icons';
 import Navigation from '../components/Navigation';
-import Map from '../components/Map';
+import MetroNavigation from '../components/MetroNavigation';
+import MTCBusNavigation from '../components/MTCBusNavigation';
 import LocationService from '../services/LocationService';
 import { usePreferences } from '../context/PreferencesContext';
 import { useVoiceInterface } from '../utils/voiceUtils';
+import '../styles/metro.css';
 
 const Navigate = () => {
   const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles } = usePreferences();
   const [user] = useState({ name: 'User' });
+  const [transportMode, setTransportMode] = useState('general'); // 'general', 'metro', 'bus'
   const [fromLocation, setFromLocation] = useState('');
   const [toLocation, setToLocation] = useState('');
   const [routes, setRoutes] = useState([]);
@@ -320,14 +325,35 @@ const Navigate = () => {
         </div>
 
         {/* Interactive Navigation Map */}
-        <Map 
-          center={{ lat: 13.0827, lng: 80.2707 }}
-          zoom={15}
-          routes={[route]}
-          fromLocation={route.from || fromLocation || 'Start'}
-          toLocation={route.to || toLocation || 'Destination'}
-          accessibilityMarkers={route.accessibilityFeatures || []}
-        />
+        <div style={{
+          width: '100%',
+          height: '300px',
+          borderRadius: '12px',
+          background: preferences.theme === 'dark' ? '#2d2d2d' : '#f8f9fa',
+          border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '16px'
+        }}>
+          <div style={{ textAlign: 'center', padding: 20 }}>
+            <FontAwesomeIcon 
+              icon={faCompass} 
+              style={{ 
+                fontSize: 48, 
+                color: preferences.theme === 'dark' ? '#666' : '#ccc',
+                marginBottom: 12 
+              }} 
+            />
+            <p style={{ 
+              margin: 0, 
+              fontSize: 14,
+              ...getTextStyles('secondary')
+            }}>
+              Navigation guidance available
+            </p>
+          </div>
+        </div>
 
         {/* Current Step Details */}
         <div style={{
@@ -574,13 +600,116 @@ const Navigate = () => {
           </p>
         </section>
 
-        {/* Location Input */}
-        <section style={{ 
+        {/* Transportation Mode Tabs */}
+        <section style={{
           ...getCardStyles(),
-          padding: 24, 
-          borderRadius: 16, 
-          marginBottom: 20 
+          padding: 0,
+          borderRadius: 16,
+          marginBottom: 20,
+          overflow: 'hidden'
         }}>
+          <div style={{
+            display: 'flex',
+            backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#f8f9fa',
+            borderRadius: '16px 16px 0 0'
+          }}>
+            <button
+              onClick={() => setTransportMode('general')}
+              style={{
+                flex: 1,
+                padding: '16px 20px',
+                border: 'none',
+                background: transportMode === 'general' 
+                  ? (preferences.theme === 'dark' ? '#404040' : '#ffffff')
+                  : 'transparent',
+                color: transportMode === 'general'
+                  ? (preferences.theme === 'dark' ? '#ffffff' : '#2c3e50')
+                  : (preferences.theme === 'dark' ? '#888' : '#666'),
+                fontWeight: transportMode === 'general' ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                borderRadius: transportMode === 'general' ? '16px 0 0 0' : '0',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <FontAwesomeIcon icon={faCar} />
+              General Routes
+            </button>
+            
+            <button
+              onClick={() => setTransportMode('metro')}
+              style={{
+                flex: 1,
+                padding: '16px 20px',
+                border: 'none',
+                background: transportMode === 'metro' 
+                  ? (preferences.theme === 'dark' ? '#404040' : '#ffffff')
+                  : 'transparent',
+                color: transportMode === 'metro'
+                  ? (preferences.theme === 'dark' ? '#ffffff' : '#2c3e50')
+                  : (preferences.theme === 'dark' ? '#888' : '#666'),
+                fontWeight: transportMode === 'metro' ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <FontAwesomeIcon icon={faTrain} />
+              Chennai Metro
+            </button>
+            
+            <button
+              onClick={() => setTransportMode('bus')}
+              style={{
+                flex: 1,
+                padding: '16px 20px',
+                border: 'none',
+                background: transportMode === 'bus' 
+                  ? (preferences.theme === 'dark' ? '#404040' : '#ffffff')
+                  : 'transparent',
+                color: transportMode === 'bus'
+                  ? (preferences.theme === 'dark' ? '#ffffff' : '#2c3e50')
+                  : (preferences.theme === 'dark' ? '#888' : '#666'),
+                fontWeight: transportMode === 'bus' ? '600' : '400',
+                fontSize: '14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                borderRadius: transportMode === 'bus' ? '0 16px 0 0' : '0',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <FontAwesomeIcon icon={faBus} />
+              Bus Routes
+            </button>
+          </div>
+        </section>
+
+        {/* Conditional Content Based on Transport Mode */}
+        {transportMode === 'metro' ? (
+          <MetroNavigation />
+        ) : transportMode === 'bus' ? (
+          <MTCBusNavigation />
+        ) : (
+          // General Routes Content (existing functionality)
+          <>
+            {/* Location Input */}
+            <section style={{ 
+              ...getCardStyles(),
+              padding: 24, 
+              borderRadius: 16, 
+              marginBottom: 20 
+            }}>
           <h2 style={{ 
             margin: '0 0 20px 0', 
             fontSize: 20, 
@@ -935,16 +1064,6 @@ const Navigate = () => {
           </button>
         </section>
 
-        {/* Route Map */}
-        {(selectedRoute || (fromLocation && toLocation)) && <Map 
-          center={{ lat: 13.0827, lng: 80.2707 }}
-          zoom={12}
-          routes={selectedRoute ? [selectedRoute] : []}
-          fromLocation={fromLocation}
-          toLocation={toLocation}
-          accessibilityMarkers={[]}
-        />}
-
         {/* Route Results */}
         {routes.length > 0 && (
           <section style={{ 
@@ -974,104 +1093,63 @@ const Navigate = () => {
                 }}
                 onClick={() => setSelectedRoute(route)}
                 >
-                  <div style={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'flex-start',
-                    marginBottom: 12
-                  }}>
-                    <div>
-                      <h3 style={{ 
-                        margin: '0 0 4px 0', 
-                        fontSize: 16, 
-                        fontWeight: 600,
-                        ...getTextStyles('primary')
-                      }}>
-                        {route.mode} Route
-                      </h3>
-                      <p style={{ 
-                        margin: 0, 
-                        fontSize: 14,
-                        ...getTextStyles('secondary')
-                      }}>
-                        {route.duration} • {route.distance} • {route.cost}
-                      </p>
-                    </div>
-                    
+                    {/* Route Info Block */}
                     <div style={{ 
-                      textAlign: 'right',
-                      fontSize: 12
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'flex-start',
+                      marginBottom: 12
                     }}>
+                      <div>
+                        <h3 style={{ 
+                          margin: '0 0 4px 0', 
+                          fontSize: 16, 
+                          fontWeight: 600,
+                          ...getTextStyles('primary')
+                        }}>
+                          {route.mode} Route
+                        </h3>
+                        <p style={{ 
+                          margin: 0, 
+                          fontSize: 14,
+                          ...getTextStyles('secondary')
+                        }}>
+                          {route.duration} • {route.distance} • {route.cost}
+                        </p>
+                      </div>
                       <div style={{ 
-                        color: route.accessibilityScore >= 80 ? '#4caf50' : 
-                              route.accessibilityScore >= 60 ? '#ff9800' : '#f44336',
-                        fontWeight: 600
+                        textAlign: 'right',
+                        fontSize: 12
                       }}>
-                        {route.accessibilityScore}% Accessible
+                        <div style={{ 
+                          color: route.accessibilityScore >= 80 ? '#4caf50' : 
+                                route.accessibilityScore >= 60 ? '#ff9800' : '#f44336',
+                          fontWeight: 600
+                        }}>
+                          {route.accessibilityScore}% Accessible
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: 8, 
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
+                    {/* Steps Info Block (no navigation button) */}
                     <div style={{ 
-                      fontSize: 12,
-                      ...getTextStyles('secondary')
+                      display: 'flex', 
+                      gap: 8, 
+                      justifyContent: 'flex-start',
+                      alignItems: 'center'
                     }}>
-                      {route.steps?.length || 0} steps
+                      <div style={{ 
+                        fontSize: 12,
+                        ...getTextStyles('secondary')
+                      }}>
+                        {route.steps?.length || 0} steps
+                      </div>
                     </div>
-                    
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartNavigation(route);
-                      }}
-                      style={{
-                        ...getButtonStyles('primary'),
-                        padding: '8px 16px',
-                        fontSize: 12
-                      }}
-                    >
-                      Start Navigation
-                    </button>
-                  </div>
                 </div>
               ))}
             </div>
           </section>
         )}
-
-        {/* No Results */}
-        {routes.length === 0 && fromLocation && toLocation && !isLoading && (
-          <section style={{ 
-            ...getCardStyles(),
-            padding: 40, 
-            borderRadius: 16, 
-            textAlign: 'center' 
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>
-              <FontAwesomeIcon icon={faMapMarkerAlt} />
-            </div>
-            <h3 style={{ 
-              margin: '0 0 8px 0', 
-              fontSize: 18, 
-              fontWeight: 600,
-              ...getTextStyles('primary')
-            }}>
-              No Routes Found
-            </h3>
-            <p style={{ 
-              margin: 0, 
-              fontSize: 14,
-              ...getTextStyles('secondary')
-            }}>
-              Try different locations or check your spelling
-            </p>
-          </section>
+          </>
         )}
       </main>
     </div>
