@@ -16,7 +16,7 @@ try {
 # Check if Android Studio/ADB is installed
 try {
     $adbVersion = adb version
-    Write-Host "✅ ADB found" -ForegroundColor Green
+    Write-Host "✅ ADB found: $($adbVersion.Split([Environment]::NewLine)[0])" -ForegroundColor Green
 } catch {
     Write-Host "⚠️  Android Studio/ADB not found. Please install Android Studio first." -ForegroundColor Yellow
     Write-Host "📱 Download from: https://developer.android.com/studio" -ForegroundColor Yellow

@@ -479,12 +479,12 @@ label {
   --shadow-md: 0 4px 20px rgba(0,0,0,0.8);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.9);
   
-  /* High contrast professional colors */
+  /* High contrast professional colors - WCAG AAA compliant */
   --primary-blue: #0052cc;
   --primary-green: #006644;
   --primary-red: #cc0000;
-  --primary-yellow: #b36b00;
-  --primary-purple: #6633cc;
+  --primary-yellow: #000000;  /* Changed from #b36b00 to black for maximum contrast */
+  --primary-purple: #4a148c;  /* Darker purple for better contrast */
   --primary-orange: #cc4400;
 }
 
@@ -540,6 +540,57 @@ label {
 .theme-high-contrast .modern-card:hover {
   border-color: #0052cc !important;
   box-shadow: 0 4px 16px rgba(0,0,0,0.8) !important;
+}
+
+/* Force high contrast for ALL text elements */
+.theme-high-contrast h1,
+.theme-high-contrast h2,
+.theme-high-contrast h3,
+.theme-high-contrast h4,
+.theme-high-contrast h5,
+.theme-high-contrast h6,
+.theme-high-contrast p,
+.theme-high-contrast span,
+.theme-high-contrast div,
+.theme-high-contrast button,
+.theme-high-contrast label {
+  color: #000000 !important;
+  font-weight: var(--font-weight-semibold) !important;
+}
+
+/* Specific overrides for colored text elements */
+.theme-high-contrast [style*="color"] {
+  color: #000000 !important;
+}
+
+/* Override any inline styles that might cause visibility issues */
+.theme-high-contrast * {
+  text-shadow: none !important;
+}
+
+/* Fix placeholder text visibility in high contrast mode */
+.theme-high-contrast .modern-input::placeholder,
+.theme-high-contrast input::placeholder,
+.theme-high-contrast textarea::placeholder {
+  color: #666666 !important;
+  font-weight: 600 !important;
+  opacity: 1 !important;
+}
+
+/* Ensure links and interactive elements are visible */
+.theme-high-contrast a,
+.theme-high-contrast button {
+  color: #000000 !important;
+  background: #ffffff !important;
+  border: 2px solid #000000 !important;
+  text-decoration: underline !important;
+}
+
+/* Special styling for gradient backgrounds in high contrast */
+.theme-high-contrast [style*="linear-gradient"],
+.theme-high-contrast [style*="background"] {
+  background: #ffffff !important;
+  color: #000000 !important;
 }
 
 /* Dark theme specific enhancements */

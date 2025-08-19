@@ -13,7 +13,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
-import { useVoiceInterface } from '../utils/voiceUtils';
+import { useVoiceInterface, getVoiceCommands } from '../utils/voiceUtils';
 
 function Home() {
   const [user, setUser] = useState(null);
@@ -57,52 +57,41 @@ function Home() {
 
     // Setup voice commands for voice mode
     if (isVoiceMode) {
-      const commands = getVoiceCommands(preferences.language);
-      
-      const commandHandlers = {
-        // Simple navigation commands
-        'home': () => {
-          speak('Already on home page');
-        },
-        'map|navigate': () => {
-          speak('Going to map');
-          navigate('/navigate');
-        },
-        'alerts': () => {
-          speak('Going to alerts');
-          navigate('/alerts');
-        },
-        'community': () => {
-          speak('Going to community');
-          navigate('/community');
-        },
-        'settings': () => {
-          speak('Going to settings');
-          navigate('/settings');
-        },
-        'logout|exit': () => {
-          speak('Logging out');
-          handleLogout();
-        },
-        'emergency|help|911': () => {
-          speak('Emergency assistance activated. Calling 911');
-          window.location.href = 'tel:911';
-        },
-        'commands|help|what can i do': () => {
-          const helpText = `Available commands: Map, Alerts, Community, Settings, Emergency, or Logout`;
-          speak(helpText);
-        }
-      };
-      
-      setupSpeechRecognition(commandHandlers);
-      
-      // Simple welcome message for voice mode
-      setTimeout(() => {
-        const welcomeMessage = `${greeting}! Welcome to Accessible Chennai. Say: Map, Alerts, Community, Settings, or Emergency.`;
-        speak(welcomeMessage).then(() => {
-          startListening();
+      speak(`${greeting}! Welcome to Accessible Chennai. You can say: map, alerts, community, settings, or help`);
+
+      if (setupSpeechRecognition) {
+        setupSpeechRecognition((command) => {
+          const cleanCommand = command.toLowerCase().trim();
+          
+          if (cleanCommand.includes('map') || cleanCommand.includes('navigate')) {
+            speak('Going to Navigation');
+            navigate('/navigate');
+          } else if (cleanCommand.includes('alerts')) {
+            speak('Going to Alerts');
+            navigate('/alerts');
+          } else if (cleanCommand.includes('community')) {
+            speak('Going to Community');
+            navigate('/community');
+          } else if (cleanCommand.includes('settings')) {
+            speak('Going to Settings');
+            navigate('/settings');
+          } else if (cleanCommand.includes('logout') || cleanCommand.includes('exit')) {
+            speak('Logging out');
+            handleLogout();
+          } else if (cleanCommand.includes('emergency') || cleanCommand.includes('911')) {
+            speak('Emergency assistance activated. Calling 911');
+            window.location.href = 'tel:911';
+          } else if (cleanCommand.includes('help')) {
+            speak('Available commands: map for navigation, alerts for updates, community to connect, settings for preferences, emergency for help, or logout to exit');
+          } else {
+            speak('Command not recognized. Try saying: map, alerts, community, settings, or help');
+          }
         });
-      }, 1000);
+
+        setTimeout(() => {
+          startListening();
+        }, 1000);
+      }
     }
   }, [navigate, getText, isVoiceMode, preferences.language, speak, setupSpeechRecognition, startListening, greeting]);
 

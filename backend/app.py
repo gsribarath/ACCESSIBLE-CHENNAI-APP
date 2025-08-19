@@ -269,7 +269,7 @@ def create_app():
     # USER PREFERENCES
     @app.route('/api/user/<int:user_id>/preferences', methods=['GET', 'POST'])
     def user_preferences(user_id):
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return {'error': 'User not found'}, 404
             
@@ -300,7 +300,7 @@ def create_app():
     # MODE SELECTION ENDPOINT - specifically for saving mode after login
     @app.route('/api/user/<int:user_id>/mode', methods=['POST'])
     def update_user_mode(user_id):
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         if not user:
             return {'error': 'User not found'}, 404
             
