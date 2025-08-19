@@ -1089,9 +1089,20 @@ const Navigate = () => {
                   border: selectedRoute === route 
                     ? '2px solid #007bff' 
                     : `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-                  cursor: 'pointer'
+                  transition: 'all 0.3s ease'
                 }}
-                onClick={() => setSelectedRoute(route)}
+                onMouseEnter={(e) => {
+                  if (selectedRoute !== route) {
+                    e.target.style.border = `1px solid #007bff`;
+                    e.target.style.boxShadow = '0 4px 12px rgba(0, 123, 255, 0.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (selectedRoute !== route) {
+                    e.target.style.border = `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`;
+                    e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
+                  }
+                }}
                 >
                     {/* Route Info Block */}
                     <div style={{ 
@@ -1130,12 +1141,13 @@ const Navigate = () => {
                         </div>
                       </div>
                     </div>
-                    {/* Steps Info Block (no navigation button) */}
+                    {/* Steps Info Block with Navigation Button */}
                     <div style={{ 
                       display: 'flex', 
                       gap: 8, 
-                      justifyContent: 'flex-start',
-                      alignItems: 'center'
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: 12
                     }}>
                       <div style={{ 
                         fontSize: 12,
@@ -1143,6 +1155,63 @@ const Navigate = () => {
                       }}>
                         {route.steps?.length || 0} steps
                       </div>
+                      
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent route selection when clicking button
+                          if (isVoiceMode) {
+                            speak(`Starting navigation for ${route.mode} route. Duration ${route.duration}, cost ${route.cost}`);
+                          }
+                          handleStartNavigation(route);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (isVoiceMode) {
+                              speak(`Starting navigation for ${route.mode} route. Duration ${route.duration}, cost ${route.cost}`);
+                            }
+                            handleStartNavigation(route);
+                          }
+                        }}
+                        tabIndex={0}
+                        aria-label={`Start navigation for ${route.mode} route, duration ${route.duration}, cost ${route.cost}`}
+                        style={{
+                          background: '#007bff',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '8px 16px',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.3s ease',
+                          boxShadow: '0 2px 4px rgba(0, 123, 255, 0.2)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.background = '#0056b3';
+                          e.target.style.transform = 'translateY(-1px)';
+                          e.target.style.boxShadow = '0 4px 8px rgba(0, 123, 255, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.background = '#007bff';
+                          e.target.style.transform = 'translateY(0)';
+                          e.target.style.boxShadow = '0 2px 4px rgba(0, 123, 255, 0.2)';
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.outline = '2px solid #007bff';
+                          e.target.style.outlineOffset = '2px';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.outline = 'none';
+                        }}
+                      >
+                        <FontAwesomeIcon icon={faPlay} style={{ fontSize: '12px' }} />
+                        Start Navigation
+                      </button>
                     </div>
                 </div>
               ))}
