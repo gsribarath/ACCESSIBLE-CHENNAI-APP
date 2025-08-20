@@ -286,10 +286,17 @@ const ModeSelection = () => {
           src="/accessibility-logo.png" 
           alt="Accessible Chennai Logo" 
           style={{ 
-            width: '80px', 
-            height: '80px', 
-            marginBottom: '16px' 
+            width: '120px', 
+            height: '120px', 
+            marginBottom: '16px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '3px solid var(--accent-color)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            transition: 'transform 0.3s ease'
           }}
+          onMouseEnter={(e) => e.target.style.transform = 'scale(1.05)'}
+          onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
         />
         
         <h1 style={{ 

@@ -8,16 +8,14 @@ const MTCBusNavigation = () => {
   const [searchResults, setSearchResults] = useState({ from: [], to: [], routes: [], areas: [], stops: [] });
   const [busRoutes, setBusRoutes] = useState([]);
   const [liveBusTimings, setLiveBusTimings] = useState(null);
-  const [mtcStatus, setMTCStatus] = useState(null);
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [activeTab, setActiveTab] = useState('route-search'); // 'route-search', 'live-timings', 'route-info'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDropdown, setShowDropdown] = useState({ from: false, to: false, search: false });
+  const [mtcStatus, setMtcStatus] = useState(null);
 
   useEffect(() => {
-    loadMTCStatus();
-    
     // Handle click outside to close dropdowns
     const handleClickOutside = (event) => {
       if (!event.target.closest('.bus-input-container')) {
@@ -32,14 +30,20 @@ const MTCBusNavigation = () => {
     };
   }, []);
 
-  const loadMTCStatus = async () => {
-    try {
-      const status = await MTCBusService.getMTCStatus();
-      setMTCStatus(status);
-    } catch (err) {
-      console.error('Failed to load MTC status:', err);
-    }
-  };
+  useEffect(() => {
+    // Fetch MTC status when component mounts
+    const fetchMTCStatus = async () => {
+      try {
+        const mtcService = new MTCBusService();
+        const status = await mtcService.getMTCStatus();
+        setMtcStatus(status);
+      } catch (error) {
+        console.error('Failed to fetch MTC status:', error);
+      }
+    };
+
+    fetchMTCStatus();
+  }, []);
 
   const handleAreaSearch = (query, type) => {
     if (!query) {
@@ -536,57 +540,6 @@ const MTCBusNavigation = () => {
               )}
             </div>
           )}
-        </div>
-      )}
-
-      {/* MTC Service Status */}
-      {mtcStatus && (
-        <div className="mtc-service-status">
-          <h3>MTC Service Information</h3>
-          
-          <div className="service-stats">
-            <div className="stat-item">
-              <span className="stat-number">{mtcStatus.totalBuses}</span>
-              <span className="stat-label">Total Buses</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">{mtcStatus.totalRoutes}</span>
-              <span className="stat-label">Bus Routes</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">{mtcStatus.serviceAreas}</span>
-              <span className="stat-label">Service Areas</span>
-            </div>
-          </div>
-
-          {mtcStatus.announcements && mtcStatus.announcements.length > 0 && (
-            <div className="service-announcements">
-              <h4>Service Announcements</h4>
-              <ul>
-                {mtcStatus.announcements.map((announcement, index) => (
-                  <li key={index}>{announcement}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <div className="contact-info">
-            <h4>Contact Information</h4>
-            <div className="contact-details">
-              <div className="contact-item">
-                <span className="contact-label">Customer Care:</span>
-                <span className="contact-value">📞 9445030516</span>
-              </div>
-              <div className="contact-item">
-                <span className="contact-label">Toll Free:</span>
-                <span className="contact-value">📞 149</span>
-              </div>
-              <div className="contact-item">
-                <span className="contact-label">Website:</span>
-                <span className="contact-value">🌐 mtcbus.tn.gov.in</span>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

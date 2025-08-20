@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .ac-text { font-family: 'Arial', sans-serif; font-weight: bold; font-size: 72px; fill: white; }
+      .bg-circle { fill: #4f46e5; }
+    </style>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" class="bg-circle" stroke="#3b82f6" stroke-width="3"/>
+  
+  <!-- AC text -->
+  <text x="100" y="120" text-anchor="middle" class="ac-text">AC</text>
+  
+  <!-- Accessibility symbol overlay -->
+  <g transform="translate(100,100) scale(0.3)" opacity="0.2">
+    <circle cx="0" cy="-40" r="15" fill="white"/>
+    <path d="M-25 -10 L25 -10 L20 0 L-20 0 Z" fill="white"/>
+    <path d="M-30 10 L-20 10 L-15 40 L-25 40 Z" fill="white"/>
+    <path d="M20 10 L30 10 L25 40 L15 40 Z" fill="white"/>
+    <path d="M-15 50 L15 50" stroke="white" stroke-width="8" stroke-linecap="round"/>
+  </g>
+</svg>

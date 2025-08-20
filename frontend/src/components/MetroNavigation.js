@@ -11,6 +11,7 @@ const MetroNavigation = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDropdown, setShowDropdown] = useState({ from: false, to: false });
+  const [showSchedule, setShowSchedule] = useState(false);
 
   // Load metro status on component mount
   useEffect(() => {
@@ -108,6 +109,213 @@ const MetroNavigation = () => {
     setSearchResults({ from: [], to: [] });
   };
 
+  // Metro Schedule Data based on Chennai Metro Timetable
+  const metroSchedule = {
+    weekdays: {
+      blueLineCorridor1: {
+        route: "WIMCO NAGAR DEPOT ↔ AIRPORT (via WIMCO NAGAR, WASHERMANPET, CENTRAL, AGDMS, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Airport",
+            firstTrain: "04:51Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 7 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 6 mins",
+            extendedNonPeak: "2200-2300Hrs Every 15mins",
+            specialNote: "3 mins frequency between Washermanpet & Alandur"
+          },
+          {
+            direction: "From Wimco Nagar Depot",
+            firstTrain: "04:56Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 7 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 6 mins",
+            extendedNonPeak: "2200-2300Hrs Every 15mins"
+          }
+        ]
+      },
+      interCorridor: {
+        route: "CHENNAI CENTRAL ↔ AIRPORT (via EGMORE, CMBT, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Chennai Central",
+            firstTrain: "04:55Hrs",
+            lastTrain: "23:17Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          },
+          {
+            direction: "From Airport",
+            firstTrain: "05:02Hrs",
+            lastTrain: "23:08Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          }
+        ]
+      },
+      greenLineCorridor2: {
+        route: "CHENNAI CENTRAL ↔ ST. THOMAS MOUNT (via EGMORE, CMBT, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Chennai Central",
+            firstTrain: "05:02Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          },
+          {
+            direction: "From St. Thomas Mount",
+            firstTrain: "05:01Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          }
+        ]
+      }
+    },
+    saturday: {
+      blueLineCorridor1: {
+        route: "WIMCO NAGAR DEPOT ↔ AIRPORT (via WIMCO NAGAR, WASHERMANPET, CENTRAL, AGDMS, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Airport",
+            firstTrain: "04:51Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 7 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 6 mins",
+            extendedNonPeak: "2200-2300Hrs Every 15mins"
+          },
+          {
+            direction: "From Wimco Nagar Depot",
+            firstTrain: "04:56Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 7 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 6 mins",
+            extendedNonPeak: "2200-2300Hrs Every 15mins"
+          }
+        ]
+      },
+      interCorridor: {
+        route: "CHENNAI CENTRAL ↔ AIRPORT (via EGMORE, CMBT, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Chennai Central",
+            firstTrain: "04:55Hrs",
+            lastTrain: "23:17Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          },
+          {
+            direction: "From Airport",
+            firstTrain: "05:02Hrs",
+            lastTrain: "23:08Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          }
+        ]
+      },
+      greenLineCorridor2: {
+        route: "CHENNAI CENTRAL ↔ ST. THOMAS MOUNT (via EGMORE, CMBT, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Chennai Central",
+            firstTrain: "05:02Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          },
+          {
+            direction: "From St. Thomas Mount",
+            firstTrain: "05:01Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-0800Hrs,1100-1700Hrs & 2000-2200Hrs Every 14 mins",
+            peakFrequency: "0800-1100Hrs & 1700-2000Hrs Every 12 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          }
+        ]
+      }
+    },
+    sunday: {
+      blueLineCorridor1: {
+        route: "WIMCO NAGAR DEPOT ↔ AIRPORT (via WIMCO NAGAR, WASHERMANPET, CENTRAL, AGDMS, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Airport",
+            firstTrain: "05:02Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-1200Hrs & 2000-2200 Every 10 mins",
+            peakFrequency: "1200-2000Hrs Every 7 mins",
+            extendedNonPeak: "2200-2300Hrs Every 15mins"
+          },
+          {
+            direction: "From Wimco Nagar Depot",
+            firstTrain: "05:03Hrs",
+            lastTrain: "23:00Hrs",
+            nonPeakFrequency: "0500-1200Hrs & 2000-2200 Every 10 mins",
+            peakFrequency: "1200-2000Hrs Every 7 mins",
+            extendedNonPeak: "2200-2300Hrs Every 15mins"
+          }
+        ]
+      },
+      interCorridor: {
+        route: "CHENNAI CENTRAL ↔ AIRPORT (via EGMORE, CMBT, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Chennai Central",
+            firstTrain: "05:01Hrs",
+            lastTrain: "23:07Hrs",
+            nonPeakFrequency: "0500-1200Hrs & 2000-2200 Every 20 mins",
+            peakFrequency: "1200-2000Hrs Every 14 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          },
+          {
+            direction: "From Airport",
+            firstTrain: "04:55Hrs",
+            lastTrain: "23:08Hrs",
+            nonPeakFrequency: "0500-1200Hrs & 2000-2200 Every 20 mins",
+            peakFrequency: "1200-2000Hrs Every 14 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          }
+        ]
+      },
+      greenLineCorridor2: {
+        route: "CHENNAI CENTRAL ↔ ST. THOMAS MOUNT (via EGMORE, CMBT, ALANDUR)",
+        schedule: [
+          {
+            direction: "From Chennai Central",
+            firstTrain: "04:51Hrs",
+            lastTrain: "23:17Hrs",
+            nonPeakFrequency: "0500-1200Hrs & 2000-2200 Every 20 mins",
+            peakFrequency: "1200-2000Hrs Every 14 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          },
+          {
+            direction: "From St. Thomas Mount",
+            firstTrain: "04:51Hrs",
+            lastTrain: "23:07Hrs",
+            nonPeakFrequency: "0500-1200Hrs & 2000-2200 Every 20 mins",
+            peakFrequency: "1200-2000Hrs Every 14 mins",
+            extendedNonPeak: "2200-2300Hrs Every 30mins"
+          }
+        ]
+      }
+    }
+  };
+
+  const getCurrentSchedule = () => {
+    const today = new Date().getDay();
+    if (today === 0) return metroSchedule.sunday; // Sunday
+    if (today === 6) return metroSchedule.saturday; // Saturday
+    return metroSchedule.weekdays; // Monday to Friday
+  };
+
   return (
     <div className="metro-navigation">
       <div className="metro-header">
@@ -121,6 +329,172 @@ const MetroNavigation = () => {
           </div>
         )}
       </div>
+
+      {/* View Metro Schedule Button - Highlighted at Top */}
+      <div className="metro-schedule-header">
+        <button 
+          onClick={() => setShowSchedule(!showSchedule)}
+          className="btn-schedule-highlight"
+          style={{
+            background: 'linear-gradient(135deg, #007bff, #0056b3)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '16px 24px',
+            fontSize: '18px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            width: '100%',
+            marginBottom: '20px',
+            boxShadow: '0 4px 15px rgba(0, 123, 255, 0.3)',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '12px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.transform = 'translateY(-2px)';
+            e.target.style.boxShadow = '0 6px 20px rgba(0, 123, 255, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'translateY(0)';
+            e.target.style.boxShadow = '0 4px 15px rgba(0, 123, 255, 0.3)';
+          }}
+        >
+          <span style={{ fontSize: '20px' }}>📅</span>
+          {showSchedule ? 'Hide Metro Schedule' : 'View Metro Schedule'}
+        </button>
+      </div>
+
+      {/* Metro Schedule Display */}
+      {showSchedule && (
+        <div className="metro-schedule-container" style={{
+          background: '#f8f9fa',
+          border: '2px solid #007bff',
+          borderRadius: '16px',
+          padding: '24px',
+          marginBottom: '24px',
+          boxShadow: '0 4px 20px rgba(0, 123, 255, 0.1)'
+        }}>
+          <div className="schedule-header" style={{
+            textAlign: 'center',
+            marginBottom: '24px',
+            padding: '16px',
+            background: 'linear-gradient(135deg, #007bff, #0056b3)',
+            color: 'white',
+            borderRadius: '12px'
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '700' }}>
+              Chennai Metro Timetable
+            </h3>
+            <p style={{ margin: '0', fontSize: '16px', opacity: '0.9' }}>
+              {new Date().getDay() === 0 ? 'SUNDAY / HOLIDAYS' : 
+               new Date().getDay() === 6 ? 'SATURDAY' : 
+               'WEEKDAYS (MONDAY - FRIDAY)'} | 05:00hrs - 23:00hrs
+            </p>
+          </div>
+
+          {Object.entries(getCurrentSchedule()).map(([corridorKey, corridor]) => (
+            <div key={corridorKey} className="corridor-schedule" style={{
+              marginBottom: '32px',
+              border: '1px solid #dee2e6',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              background: 'white'
+            }}>
+              <div className="corridor-header" style={{
+                background: corridorKey.includes('blue') ? '#007bff' : 
+                           corridorKey.includes('green') ? '#28a745' : '#17a2b8',
+                color: 'white',
+                padding: '16px',
+                fontWeight: '600',
+                fontSize: '16px',
+                textAlign: 'center'
+              }}>
+                {corridorKey.includes('blue') ? 'CORRIDOR - 1 (BLUE LINE)' :
+                 corridorKey.includes('green') ? 'CORRIDOR - 2 (GREEN LINE)' :
+                 'INTER-CORRIDOR'}
+              </div>
+              <div className="route-title" style={{
+                background: corridorKey.includes('blue') ? '#007bff' : 
+                           corridorKey.includes('green') ? '#28a745' : '#17a2b8',
+                color: 'white',
+                padding: '12px 16px',
+                fontSize: '14px',
+                fontWeight: '600',
+                textAlign: 'center'
+              }}>
+                {corridor.route}
+              </div>
+              
+              <div className="schedule-table">
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa' }}>
+                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                        Departure Time of First train
+                      </th>
+                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                        Departure Time of Last train
+                      </th>
+                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                        Non peak hour Frequency
+                      </th>
+                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                        Peak hour Frequency
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {corridor.schedule.map((schedule, index) => (
+                      <tr key={index}>
+                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                          <strong>{schedule.direction}:</strong> {schedule.firstTrain}
+                        </td>
+                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                          <strong>{schedule.direction}:</strong> {schedule.lastTrain}
+                        </td>
+                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                          {schedule.nonPeakFrequency}
+                          {schedule.extendedNonPeak && (
+                            <div style={{ color: '#dc3545', fontWeight: '600', marginTop: '4px' }}>
+                              {schedule.extendedNonPeak}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                          {schedule.peakFrequency}
+                          {schedule.specialNote && (
+                            <div style={{ color: '#28a745', fontSize: '12px', marginTop: '4px' }}>
+                              {schedule.specialNote}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+
+          <div className="schedule-notes" style={{
+            background: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '8px',
+            padding: '16px',
+            fontSize: '13px',
+            lineHeight: '1.5'
+          }}>
+            <strong>NOTE:</strong>
+            <br />
+            1. Headway from Central ↔ Alandur (via CMBT) during peak hours, Non peak hours & <span style={{ color: '#dc3545', fontWeight: '600' }}>Extended Non peak hours</span> are maintained 6 mins, 7 mins and <span style={{ color: '#dc3545', fontWeight: '600' }}>15 mins</span> respectively.
+            <br />
+            2. No short loop service on {new Date().getDay() === 6 ? 'Saturdays' : new Date().getDay() === 0 ? 'Sundays' : 'Saturdays'}.
+          </div>
+        </div>
+      )}
 
       <div className="metro-form">
         <div className="station-input-group">
@@ -466,36 +840,6 @@ const MetroNavigation = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Metro Status */}
-      {metroStatus && (
-        <div className="metro-status-details">
-          <h3>Metro Network Status</h3>
-          <div className="lines-status">
-            {Object.entries(metroStatus.lines).map(([line, status]) => (
-              <div key={line} className="line-status">
-                <span className={`line-badge ${line.toLowerCase()}`}>{line} Line</span>
-                <span className={`status ${status.status.toLowerCase()}`}>{status.status}</span>
-                <span className="frequency">Frequency: {status.frequency}</span>
-                {status.delay > 0 && (
-                  <span className="delay">Delay: {status.delay} min</span>
-                )}
-              </div>
-            ))}
-          </div>
-          
-          {metroStatus.announcements && metroStatus.announcements.length > 0 && (
-            <div className="announcements">
-              <h4>Service Announcements</h4>
-              <ul>
-                {metroStatus.announcements.map((announcement, index) => (
-                  <li key={index}>{announcement}</li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
       )}
     </div>

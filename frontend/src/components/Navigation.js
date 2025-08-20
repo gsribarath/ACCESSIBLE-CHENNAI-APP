@@ -45,14 +45,19 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            position: 'relative'
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <span style={{ 
-              fontSize: 18, 
-              color: 'var(--nav-bg)', 
-              fontWeight: 'var(--font-weight-bold)',
-              fontFamily: 'var(--font-heading)'
-            }}>AC</span>
+            <img 
+              src="/accessibility-logo.png" 
+              alt="Accessible Chennai Logo" 
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                objectFit: 'cover',
+                borderRadius: '50%'
+              }}
+            />
           </div>
           <h1 style={{ 
             margin: 0, 

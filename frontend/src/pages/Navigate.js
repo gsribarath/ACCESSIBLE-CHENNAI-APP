@@ -6,7 +6,7 @@ import {
   faStop, 
   faCompass,
   faSearch,
-  faTarget,
+  faCrosshairs,
   faMicrophone,
   faTrain,
   faCar,
@@ -43,6 +43,7 @@ const Navigate = () => {
   const [activeInput, setActiveInput] = useState(null);
   const [voiceInputMode, setVoiceInputMode] = useState(null); // 'from', 'to', or null
   const [showFullScreenMap, setShowFullScreenMap] = useState(false);
+  const [dataRestored, setDataRestored] = useState(false);
   const fromInputRef = useRef(null);
   const toInputRef = useRef(null);
   const fromSuggestionsRef = useRef(null);
@@ -58,6 +59,71 @@ const Navigate = () => {
     startListening,
     stopListening
   } = useVoiceInterface();
+
+  // Data persistence functions
+  const saveNavigationData = () => {
+    const navigationData = {
+      fromLocation,
+      toLocation,
+      transportMode,
+      routes,
+      selectedRoute,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('accessibleChennaiNavigation', JSON.stringify(navigationData));
+  };
+
+  const loadNavigationData = () => {
+    try {
+      const saved = localStorage.getItem('accessibleChennaiNavigation');
+      if (saved) {
+        const data = JSON.parse(saved);
+        // Check if data is less than 24 hours old
+        const now = Date.now();
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        
+        if (now - data.timestamp < twentyFourHours) {
+          setFromLocation(data.fromLocation || '');
+          setToLocation(data.toLocation || '');
+          setTransportMode(data.transportMode || 'general');
+          setRoutes(data.routes || []);
+          setSelectedRoute(data.selectedRoute || null);
+          
+          // Show notification if any data was restored
+          if (data.fromLocation || data.toLocation || data.routes?.length > 0) {
+            setDataRestored(true);
+            setTimeout(() => setDataRestored(false), 5000); // Hide after 5 seconds
+          }
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error('Error loading navigation data:', error);
+    }
+    return false;
+  };
+
+  const clearNavigationData = () => {
+    localStorage.removeItem('accessibleChennaiNavigation');
+    setFromLocation('');
+    setToLocation('');
+    setRoutes([]);
+    setSelectedRoute(null);
+    setError('');
+    setDataRestored(false);
+  };
+
+  // Load saved data on component mount
+  useEffect(() => {
+    loadNavigationData();
+  }, []);
+
+  // Save data whenever navigation state changes
+  useEffect(() => {
+    if (fromLocation || toLocation || routes.length > 0) {
+      saveNavigationData();
+    }
+  }, [fromLocation, toLocation, transportMode, routes, selectedRoute]);
   
   // Handle click outside to close suggestions
   useEffect(() => {
@@ -114,10 +180,7 @@ const Navigate = () => {
         },
         'clear|reset': () => {
           speak('Clearing all');
-          setFromLocation('');
-          setToLocation('');
-          setRoutes([]);
-          setSelectedRoute(null);
+          clearNavigationData();
         },
         'back': () => {
           if (selectedRoute) {
@@ -561,6 +624,29 @@ const Navigate = () => {
   return (
     <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
       <Navigation user={user} onLogout={handleLogout} />
+
+      {/* Data Restoration Notification */}
+      {dataRestored && (
+        <div style={{
+          position: 'fixed',
+          top: '80px',
+          left: '20px',
+          background: '#28a745',
+          color: 'white',
+          padding: '12px 20px',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '14px',
+          fontWeight: '600'
+        }}>
+          <FontAwesomeIcon icon={faCrosshairs} />
+          Previous navigation data restored
+        </div>
+      )}
 
       {/* Voice Mode Indicator */}
       {isVoiceMode && (
@@ -1068,25 +1154,48 @@ const Navigate = () => {
             </div>
           )}
 
-          <button
-            onClick={handleSearch}
-            disabled={isLoading || !fromLocation || !toLocation}
-            style={{
-              ...getButtonStyles('primary'),
-              width: '100%',
-              padding: '12px',
-              fontSize: '16px',
-              fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              opacity: (isLoading || !fromLocation || !toLocation) ? 0.6 : 1,
-              cursor: (isLoading || !fromLocation || !toLocation) ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {isLoading ? 'Searching...' : <><FontAwesomeIcon icon={faSearch} /> Find Routes</>}
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={handleSearch}
+              disabled={isLoading || !fromLocation || !toLocation}
+              style={{
+                ...getButtonStyles('primary'),
+                flex: 1,
+                padding: '12px',
+                fontSize: '16px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                opacity: (isLoading || !fromLocation || !toLocation) ? 0.6 : 1,
+                cursor: (isLoading || !fromLocation || !toLocation) ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {isLoading ? 'Searching...' : <><FontAwesomeIcon icon={faSearch} /> Find Routes</>}
+            </button>
+            
+            <button
+              onClick={clearNavigationData}
+              disabled={isLoading}
+              style={{
+                ...getButtonStyles('secondary'),
+                padding: '12px 20px',
+                fontSize: '16px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                minWidth: '120px',
+                opacity: isLoading ? 0.6 : 1,
+                cursor: isLoading ? 'not-allowed' : 'pointer'
+              }}
+            >
+              <FontAwesomeIcon icon={faCrosshairs} />
+              Clear
+            </button>
+          </div>
         </section>
 
         {/* Route Results */}
@@ -1377,48 +1486,12 @@ const Navigate = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleOpenFullScreenMap(route);
+                            const start = encodeURIComponent(fromLocation);
+                            const end = encodeURIComponent(toLocation);
+                            window.open(`https://www.google.com/maps/dir/?api=1&origin=${start}&destination=${end}`, '_blank');
                           }}
                           style={{
-                            background: 'transparent',
-                            color: '#007bff',
-                            border: '2px solid #007bff',
-                            borderRadius: '8px',
-                            padding: '8px 16px',
-                            fontSize: '14px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.target.style.background = '#007bff';
-                            e.target.style.color = 'white';
-                            e.target.style.transform = 'translateY(-1px)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.target.style.background = 'transparent';
-                            e.target.style.color = '#007bff';
-                            e.target.style.transform = 'translateY(0)';
-                          }}
-                        >
-                          <FontAwesomeIcon icon={faMap} style={{ fontSize: '12px' }} />
-                          View on Map
-                        </button>
-
-                        {/* Start Navigation Button */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isVoiceMode) {
-                              speak(`Starting navigation for ${route.mode} route. Duration ${route.duration}, cost ${route.cost}`);
-                            }
-                            handleStartNavigation(route);
-                          }}
-                          style={{
-                            background: '#007bff',
+                            background: '#4285F4',
                             color: 'white',
                             border: 'none',
                             borderRadius: '8px',
@@ -1430,21 +1503,21 @@ const Navigate = () => {
                             alignItems: 'center',
                             gap: '8px',
                             transition: 'all 0.3s ease',
-                            boxShadow: '0 2px 4px rgba(0, 123, 255, 0.2)'
+                            boxShadow: '0 2px 4px rgba(66, 133, 244, 0.2)'
                           }}
                           onMouseEnter={(e) => {
-                            e.target.style.background = '#0056b3';
+                            e.target.style.background = '#3367d6';
                             e.target.style.transform = 'translateY(-1px)';
-                            e.target.style.boxShadow = '0 4px 8px rgba(0, 123, 255, 0.3)';
+                            e.target.style.boxShadow = '0 4px 8px rgba(66, 133, 244, 0.3)';
                           }}
                           onMouseLeave={(e) => {
-                            e.target.style.background = '#007bff';
+                            e.target.style.background = '#4285F4';
                             e.target.style.transform = 'translateY(0)';
-                            e.target.style.boxShadow = '0 2px 4px rgba(0, 123, 255, 0.2)';
+                            e.target.style.boxShadow = '0 2px 4px rgba(66, 133, 244, 0.2)';
                           }}
                         >
-                          <FontAwesomeIcon icon={faDirections} style={{ fontSize: '12px' }} />
-                          Start Navigation
+                          <FontAwesomeIcon icon={faMap} style={{ fontSize: '12px' }} />
+                          View on Map
                         </button>
                       </div>
                     </div>

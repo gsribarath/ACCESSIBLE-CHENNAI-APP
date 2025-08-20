@@ -480,7 +480,6 @@ const FullScreenMap = ({
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
-          
           <div>
             <h3 style={{ 
               margin: 0, 
@@ -496,43 +495,27 @@ const FullScreenMap = ({
             </p>
           </div>
         </div>
-
         <div>
-          {!isNavigating ? (
-            <button
-              onClick={handleStartNavigation}
-              style={{
-                background: '#007AFF',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: 16,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <FontAwesomeIcon icon={faPlay} style={{ marginRight: 6 }} />
-              Start Navigation
-            </button>
-          ) : (
-            <button
-              onClick={handleStopNavigation}
-              style={{
-                background: '#EF4444',
-                color: 'white',
-                border: 'none',
-                padding: '8px 16px',
-                borderRadius: 16,
-                fontSize: 14,
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <FontAwesomeIcon icon={faStop} style={{ marginRight: 6 }} />
-              Stop Navigation
-            </button>
-          )}
+          <button
+            onClick={() => {
+              const start = encodeURIComponent(fromLocation);
+              const end = encodeURIComponent(toLocation);
+              window.open(`https://www.google.com/maps/dir/?api=1&origin=${start}&destination=${end}`, '_blank');
+            }}
+            style={{
+              background: '#4285F4',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: 16,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}
+          >
+            <FontAwesomeIcon icon={faMapMarkerAlt} style={{ marginRight: 6 }} />
+            View on Map
+          </button>
         </div>
       </div>
 
