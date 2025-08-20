@@ -10,11 +10,19 @@ import {
   faMicrophone,
   faTrain,
   faCar,
-  faBus
+  faBus,
+  faRoute,
+  faWalking,
+  faFlag,
+  faLocationArrow,
+  faMap,
+  faDirections
 } from '@fortawesome/free-solid-svg-icons';
 import Navigation from '../components/Navigation';
 import MetroNavigation from '../components/MetroNavigation';
 import MTCBusNavigation from '../components/MTCBusNavigation';
+import EnhancedMap from '../components/EnhancedMap';
+import FullScreenMap from '../components/FullScreenMap';
 import LocationService from '../services/LocationService';
 import { usePreferences } from '../context/PreferencesContext';
 import { useVoiceInterface } from '../utils/voiceUtils';
@@ -34,6 +42,7 @@ const Navigate = () => {
   const [suggestions, setSuggestions] = useState({ from: [], to: [] });
   const [activeInput, setActiveInput] = useState(null);
   const [voiceInputMode, setVoiceInputMode] = useState(null); // 'from', 'to', or null
+  const [showFullScreenMap, setShowFullScreenMap] = useState(false);
   const fromInputRef = useRef(null);
   const toInputRef = useRef(null);
   const fromSuggestionsRef = useRef(null);
@@ -327,32 +336,21 @@ const Navigate = () => {
         {/* Interactive Navigation Map */}
         <div style={{
           width: '100%',
-          height: '300px',
+          height: '400px',
           borderRadius: '12px',
           background: preferences.theme === 'dark' ? '#2d2d2d' : '#f8f9fa',
           border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '16px'
+          marginBottom: '16px',
+          overflow: 'hidden'
         }}>
-          <div style={{ textAlign: 'center', padding: 20 }}>
-            <FontAwesomeIcon 
-              icon={faCompass} 
-              style={{ 
-                fontSize: 48, 
-                color: preferences.theme === 'dark' ? '#666' : '#ccc',
-                marginBottom: 12 
-              }} 
-            />
-            <p style={{ 
-              margin: 0, 
-              fontSize: 14,
-              ...getTextStyles('secondary')
-            }}>
-              Navigation guidance available
-            </p>
-          </div>
+          <EnhancedMap 
+            route={route}
+            fromLocation={route.fromLocation || 'Starting Point'}
+            toLocation={route.toLocation || 'Destination'}
+            routeCoordinates={route.routeCoordinates || []}
+            isNavigating={isNavigating}
+            currentStep={currentStep}
+          />
         </div>
 
         {/* Current Step Details */}
@@ -499,7 +497,13 @@ const Navigate = () => {
 
   // Start navigation
   const handleStartNavigation = (route) => {
-    setSelectedRoute(route);
+    // Enhance route with location information
+    const enhancedRoute = {
+      ...route,
+      fromLocation: fromLocation,
+      toLocation: toLocation
+    };
+    setSelectedRoute(enhancedRoute);
     setIsNavigating(true);
   };
 
@@ -507,6 +511,27 @@ const Navigate = () => {
   const handleBackFromNavigation = () => {
     setIsNavigating(false);
     setSelectedRoute(null);
+  };
+
+  // Open full-screen Chennai map
+  const handleOpenFullScreenMap = (route) => {
+    setSelectedRoute(route);
+    setShowFullScreenMap(true);
+  };
+
+  // Close full-screen map
+  const handleCloseFullScreenMap = () => {
+    setShowFullScreenMap(false);
+  };
+
+  // Start navigation from full-screen map
+  const handleStartNavigationFromMap = () => {
+    setIsNavigating(true);
+  };
+
+  // Stop navigation from full-screen map
+  const handleStopNavigationFromMap = () => {
+    setIsNavigating(false);
   };
 
   if (!user) {
@@ -1089,7 +1114,8 @@ const Navigate = () => {
                   border: selectedRoute === route 
                     ? '2px solid #007bff' 
                     : `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
-                  transition: 'all 0.3s ease'
+                  transition: 'all 0.3s ease',
+                  position: 'relative'
                 }}
                 onMouseEnter={(e) => {
                   if (selectedRoute !== route) {
@@ -1104,114 +1130,323 @@ const Navigate = () => {
                   }
                 }}
                 >
-                    {/* Route Info Block */}
+                    {/* Route Header */}
                     <div style={{ 
                       display: 'flex', 
                       justifyContent: 'space-between', 
                       alignItems: 'flex-start',
-                      marginBottom: 12
+                      marginBottom: 16
                     }}>
-                      <div>
-                        <h3 style={{ 
-                          margin: '0 0 4px 0', 
-                          fontSize: 16, 
-                          fontWeight: 600,
-                          ...getTextStyles('primary')
-                        }}>
-                          {route.mode} Route
-                        </h3>
-                        <p style={{ 
-                          margin: 0, 
-                          fontSize: 14,
-                          ...getTextStyles('secondary')
-                        }}>
-                          {route.duration} • {route.distance} • {route.cost}
-                        </p>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                          <FontAwesomeIcon 
+                            icon={route.mode.includes('Bus') ? faBus : 
+                                  route.mode.includes('Metro') ? faTrain : 
+                                  route.mode.includes('Walk') ? faWalking : faCar} 
+                            style={{ color: '#007bff', fontSize: 18 }}
+                          />
+                          <h3 style={{ 
+                            margin: 0, 
+                            fontSize: 18, 
+                            fontWeight: 600,
+                            ...getTextStyles('primary')
+                          }}>
+                            {route.mode}
+                          </h3>
+                          {route.busRoutes && route.busRoutes.length > 0 && (
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              {route.busRoutes.map((busRoute, idx) => (
+                                <span key={idx} style={{
+                                  background: '#007bff',
+                                  color: 'white',
+                                  padding: '2px 8px',
+                                  borderRadius: 12,
+                                  fontSize: 11,
+                                  fontWeight: 600
+                                }}>
+                                  {busRoute}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div style={{ display: 'flex', gap: 24, marginBottom: 12 }}>
+                          <div>
+                            <span style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Duration</span>
+                            <div style={{ fontSize: 16, fontWeight: 600, ...getTextStyles('primary') }}>{route.duration}</div>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Distance</span>
+                            <div style={{ fontSize: 16, fontWeight: 600, ...getTextStyles('primary') }}>{route.distance}</div>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cost</span>
+                            <div style={{ fontSize: 16, fontWeight: 600, color: '#22c55e' }}>{route.cost}</div>
+                          </div>
+                        </div>
                       </div>
+                      
                       <div style={{ 
                         textAlign: 'right',
-                        fontSize: 12
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'flex-end',
+                        gap: 8
                       }}>
                         <div style={{ 
-                          color: route.accessibilityScore >= 80 ? '#4caf50' : 
-                                route.accessibilityScore >= 60 ? '#ff9800' : '#f44336',
+                          background: route.accessibilityScore >= 80 ? '#dcfce7' : 
+                                    route.accessibilityScore >= 60 ? '#fef3c7' : '#fee2e2',
+                          color: route.accessibilityScore >= 80 ? '#166534' : 
+                                route.accessibilityScore >= 60 ? '#92400e' : '#991b1b',
+                          padding: '4px 12px',
+                          borderRadius: 20,
+                          fontSize: 12,
                           fontWeight: 600
                         }}>
                           {route.accessibilityScore}% Accessible
                         </div>
+                        
+                        {route.realTimeInfo && (
+                          <div style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>
+                            <div>Next: {route.realTimeInfo.nextMetroArrival || route.realTimeInfo.nextBusArrival}</div>
+                            {route.realTimeInfo.currentDelay && route.realTimeInfo.currentDelay !== 'On time' && (
+                              <div style={{ color: '#f59e0b' }}>Delay: {route.realTimeInfo.currentDelay}</div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {/* Steps Info Block with Navigation Button */}
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: 8, 
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      marginTop: 12
-                    }}>
-                      <div style={{ 
-                        fontSize: 12,
-                        ...getTextStyles('secondary')
+
+                    {/* Real-time Information Panel */}
+                    {route.realTimeInfo && (
+                      <div style={{
+                        background: preferences.theme === 'dark' ? '#1f2937' : '#f8fafc',
+                        padding: 12,
+                        borderRadius: 8,
+                        marginBottom: 16,
+                        border: `1px solid ${preferences.theme === 'dark' ? '#374151' : '#e2e8f0'}`
                       }}>
-                        {route.steps?.length || 0} steps
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, ...getTextStyles('primary') }}>LIVE UPDATES</span>
+                          <div 
+                            className="pulse-animation"
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              background: '#22c55e'
+                            }} 
+                          />
+                        </div>
+                        
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, fontSize: 11 }}>
+                          {route.realTimeInfo.nextMetroArrival && (
+                            <div>
+                              <span style={{ color: '#666' }}>Next Metro:</span>
+                              <div style={{ fontWeight: 600, ...getTextStyles('primary') }}>{route.realTimeInfo.nextMetroArrival}</div>
+                            </div>
+                          )}
+                          {route.realTimeInfo.nextBusArrival && (
+                            <div>
+                              <span style={{ color: '#666' }}>Next Bus:</span>
+                              <div style={{ fontWeight: 600, ...getTextStyles('primary') }}>{route.realTimeInfo.nextBusArrival}</div>
+                            </div>
+                          )}
+                          <div>
+                            <span style={{ color: '#666' }}>Crowd Level:</span>
+                            <div style={{ 
+                              fontWeight: 600, 
+                              color: route.realTimeInfo.crowdLevel === 'High' ? '#ef4444' :
+                                     route.realTimeInfo.crowdLevel === 'Medium' ? '#f59e0b' : '#22c55e'
+                            }}>
+                              {route.realTimeInfo.crowdLevel}
+                            </div>
+                          </div>
+                          {route.realTimeInfo.alternativeBuses && (
+                            <div>
+                              <span style={{ color: '#666' }}>Alternatives:</span>
+                              <div style={{ fontWeight: 600, fontSize: 10, ...getTextStyles('primary') }}>
+                                {route.realTimeInfo.alternativeBuses.slice(0, 2).join(', ')}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Route Steps Preview */}
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                        <FontAwesomeIcon icon={faRoute} style={{ color: '#666', fontSize: 14 }} />
+                        <span style={{ fontSize: 14, fontWeight: 600, ...getTextStyles('primary') }}>Route Details</span>
                       </div>
                       
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation(); // Prevent route selection when clicking button
-                          if (isVoiceMode) {
-                            speak(`Starting navigation for ${route.mode} route. Duration ${route.duration}, cost ${route.cost}`);
-                          }
-                          handleStartNavigation(route);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {route.steps?.slice(0, 3).map((step, stepIndex) => (
+                          <div key={stepIndex} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            padding: '8px 0',
+                            borderBottom: stepIndex < 2 ? `1px solid ${preferences.theme === 'dark' ? '#374151' : '#e5e7eb'}` : 'none'
+                          }}>
+                            <div style={{
+                              width: 24,
+                              height: 24,
+                              borderRadius: '50%',
+                              background: stepIndex === 0 ? '#22c55e' : stepIndex === route.steps.length - 1 ? '#ef4444' : '#3b82f6',
+                              color: 'white',
+                              fontSize: 10,
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              {stepIndex + 1}
+                            </div>
+                            <span style={{ fontSize: 13, ...getTextStyles('primary') }}>{step}</span>
+                          </div>
+                        ))}
+                        
+                        {route.steps && route.steps.length > 3 && (
+                          <div style={{ 
+                            fontSize: 12, 
+                            color: '#666', 
+                            fontStyle: 'italic',
+                            paddingLeft: 36
+                          }}>
+                            +{route.steps.length - 3} more steps...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Accessibility Features */}
+                    {route.accessibilityFeatures && route.accessibilityFeatures.length > 0 && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Accessibility Features
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {route.accessibilityFeatures.slice(0, 4).map((feature, idx) => (
+                            <span key={idx} style={{
+                              background: '#dcfce7',
+                              color: '#166534',
+                              padding: '4px 8px',
+                              borderRadius: 12,
+                              fontSize: 11,
+                              fontWeight: 500
+                            }}>
+                              {feature}
+                            </span>
+                          ))}
+                          {route.accessibilityFeatures.length > 4 && (
+                            <span style={{
+                              background: '#f3f4f6',
+                              color: '#6b7280',
+                              padding: '4px 8px',
+                              borderRadius: 12,
+                              fontSize: 11,
+                              fontWeight: 500
+                            }}>
+                              +{route.accessibilityFeatures.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: 16,
+                      paddingTop: 16,
+                      borderTop: `1px solid ${preferences.theme === 'dark' ? '#374151' : '#e5e7eb'}`
+                    }}>
+                      <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#666' }}>
+                        <span>Carbon: {route.carbonFootprint}</span>
+                        <span>•</span>
+                        <span>{route.steps?.length || 0} steps</span>
+                      </div>
+                      
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {/* View on Map Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenFullScreenMap(route);
+                          }}
+                          style={{
+                            background: 'transparent',
+                            color: '#007bff',
+                            border: '2px solid #007bff',
+                            borderRadius: '8px',
+                            padding: '8px 16px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.3s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = '#007bff';
+                            e.target.style.color = 'white';
+                            e.target.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'transparent';
+                            e.target.style.color = '#007bff';
+                            e.target.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faMap} style={{ fontSize: '12px' }} />
+                          View on Map
+                        </button>
+
+                        {/* Start Navigation Button */}
+                        <button
+                          onClick={(e) => {
                             e.stopPropagation();
                             if (isVoiceMode) {
                               speak(`Starting navigation for ${route.mode} route. Duration ${route.duration}, cost ${route.cost}`);
                             }
                             handleStartNavigation(route);
-                          }
-                        }}
-                        tabIndex={0}
-                        aria-label={`Start navigation for ${route.mode} route, duration ${route.duration}, cost ${route.cost}`}
-                        style={{
-                          background: '#007bff',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '8px 16px',
-                          fontSize: '14px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'all 0.3s ease',
-                          boxShadow: '0 2px 4px rgba(0, 123, 255, 0.2)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.background = '#0056b3';
-                          e.target.style.transform = 'translateY(-1px)';
-                          e.target.style.boxShadow = '0 4px 8px rgba(0, 123, 255, 0.3)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.background = '#007bff';
-                          e.target.style.transform = 'translateY(0)';
-                          e.target.style.boxShadow = '0 2px 4px rgba(0, 123, 255, 0.2)';
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.outline = '2px solid #007bff';
-                          e.target.style.outlineOffset = '2px';
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.outline = 'none';
-                        }}
-                      >
-                        <FontAwesomeIcon icon={faPlay} style={{ fontSize: '12px' }} />
-                        Start Navigation
-                      </button>
+                          }}
+                          style={{
+                            background: '#007bff',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '10px 20px',
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            transition: 'all 0.3s ease',
+                            boxShadow: '0 2px 4px rgba(0, 123, 255, 0.2)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = '#0056b3';
+                            e.target.style.transform = 'translateY(-1px)';
+                            e.target.style.boxShadow = '0 4px 8px rgba(0, 123, 255, 0.3)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = '#007bff';
+                            e.target.style.transform = 'translateY(0)';
+                            e.target.style.boxShadow = '0 2px 4px rgba(0, 123, 255, 0.2)';
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faDirections} style={{ fontSize: '12px' }} />
+                          Start Navigation
+                        </button>
+                      </div>
                     </div>
                 </div>
               ))}
@@ -1221,6 +1456,18 @@ const Navigate = () => {
           </>
         )}
       </main>
+
+      {/* Full-Screen Chennai Map */}
+      <FullScreenMap
+        isOpen={showFullScreenMap}
+        onClose={handleCloseFullScreenMap}
+        route={selectedRoute}
+        fromLocation={fromLocation}
+        toLocation={toLocation}
+        onStartNavigation={handleStartNavigationFromMap}
+        onStopNavigation={handleStopNavigationFromMap}
+        isNavigating={isNavigating}
+      />
     </div>
   );
 };
