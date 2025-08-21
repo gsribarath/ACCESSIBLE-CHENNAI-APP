@@ -9,7 +9,9 @@ import {
   faCog,
   faPhoneAlt,
   faCircle,
-  faMicrophone
+  faMicrophone,
+  faRoute,
+  faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
@@ -57,7 +59,7 @@ function Home() {
 
     // Setup voice commands for voice mode
     if (isVoiceMode) {
-      speak(`${greeting}! Welcome to Accessible Chennai. You can say: map, alerts, community, settings, or help`);
+      speak(`${greeting}! Welcome to Accessible Chennai. You can say: map, community, settings, about us, or help`);
 
       if (setupSpeechRecognition) {
         setupSpeechRecognition((command) => {
@@ -66,25 +68,23 @@ function Home() {
           if (cleanCommand.includes('map') || cleanCommand.includes('navigate')) {
             speak('Going to Navigation');
             navigate('/navigate');
-          } else if (cleanCommand.includes('alerts')) {
-            speak('Going to Alerts');
-            navigate('/alerts');
           } else if (cleanCommand.includes('community')) {
             speak('Going to Community');
             navigate('/community');
           } else if (cleanCommand.includes('settings')) {
             speak('Going to Settings');
             navigate('/settings');
+          } else if (cleanCommand.includes('about') || cleanCommand.includes('about us')) {
+            speak('About Accessible Chennai');
+            // For now, we'll show a voice description since about is part of the home page
+            speak('Accessible Chennai is your trusted navigation companion for people with disabilities. We provide barrier-free routes, real-time accessibility information, and community support to make Chennai more accessible for everyone.');
           } else if (cleanCommand.includes('logout') || cleanCommand.includes('exit')) {
             speak('Logging out');
             handleLogout();
-          } else if (cleanCommand.includes('emergency') || cleanCommand.includes('911')) {
-            speak('Emergency assistance activated. Calling 911');
-            window.location.href = 'tel:911';
           } else if (cleanCommand.includes('help')) {
-            speak('Available commands: map for navigation, alerts for updates, community to connect, settings for preferences, emergency for help, or logout to exit');
+            speak('Available commands: map for navigation, community to connect, settings for preferences, about us to learn more, or logout to exit');
           } else {
-            speak('Command not recognized. Try saying: map, alerts, community, settings, or help');
+            speak('Command not recognized. Try saying: map, community, settings, about us, or help');
           }
         });
 
@@ -106,16 +106,34 @@ function Home() {
   };
 
   const quickActions = [
-    { title: getText('navigate'), desc: 'Find accessible routes', path: '/navigate' },
-    { title: getText('alerts'), desc: 'Real-time updates', path: '/alerts' },
-    { title: getText('community'), desc: 'Connect & share', path: '/community' },
-    { title: getText('settings'), desc: 'Preferences', path: '/settings' }
-  ];
-
-  const recentAlerts = [
-    { id: 1, type: 'Service', msg: 'Metro service delayed on Blue Line', time: '10 min ago' },
-    { id: 2, type: 'Accessibility', msg: 'Lift maintenance at Central Station', time: '25 min ago' },
-    { id: 3, type: 'Weather', msg: 'Heavy rain expected - plan accordingly', time: '1 hour ago' }
+    { 
+      title: getText('navigate'), 
+      desc: 'Find accessible routes', 
+      path: '/navigate',
+      icon: faRoute,
+      gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+    },
+    { 
+      title: getText('community'), 
+      desc: 'Connect & share', 
+      path: '/community',
+      icon: faUsers,
+      gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+    },
+    { 
+      title: getText('settings'), 
+      desc: 'Preferences', 
+      path: '/settings',
+      icon: faCog,
+      gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+    },
+    { 
+      title: 'About Us', 
+      desc: 'Learn about our mission', 
+      path: '#about',
+      icon: faInfoCircle,
+      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+    }
   ];
 
   // Show onboarding for first-time users
@@ -366,14 +384,6 @@ function Home() {
                   description: 'AI-powered accessible route planning'
                 },
                 { 
-                  color: '#EF4444',
-                  bgColor: 'rgba(239, 68, 68, 0.1)',
-                  borderColor: 'rgba(239, 68, 68, 0.2)',
-                  icon: faExclamationTriangle,
-                  title: 'Community Alerts',
-                  description: 'Real-time accessibility updates'
-                },
-                { 
                   color: '#10B981',
                   bgColor: 'rgba(16, 185, 129, 0.1)',
                   borderColor: 'rgba(16, 185, 129, 0.2)',
@@ -388,6 +398,14 @@ function Home() {
                   icon: faCog,
                   title: 'Accessibility Settings',
                   description: 'Customize your experience'
+                },
+                { 
+                  color: '#F59E0B',
+                  bgColor: 'rgba(245, 158, 11, 0.1)',
+                  borderColor: 'rgba(245, 158, 11, 0.2)',
+                  icon: faHandPaper,
+                  title: 'About Us',
+                  description: 'Discover our accessibility mission'
                 }
               ];
               const currentAction = actionData[index] || actionData[0];
@@ -395,7 +413,17 @@ function Home() {
               return (
                 <div
                   key={action.title}
-                  onClick={() => navigate(action.path)}
+                  onClick={() => {
+                    if (action.title === 'About Us') {
+                      // Scroll to the about section
+                      const aboutSection = document.querySelector('[data-section="about"]');
+                      if (aboutSection) {
+                        aboutSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    } else {
+                      navigate(action.path);
+                    }
+                  }}
                   style={{
                     ...getCardStyles(),
                     padding: '24px',
@@ -511,201 +539,295 @@ function Home() {
           </div>
         </section>
 
-        {/* Recent Alerts */}
-        <section style={{ 
-          ...getCardStyles(),
-          padding: '24px', 
-          borderRadius: '20px',
-          marginBottom: '24px',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Decorative background element */}
-          <div style={{
-            position: 'absolute',
-            top: '-30px',
-            right: '-30px',
-            width: '100px',
-            height: '100px',
-            background: 'linear-gradient(135deg, #F44336 0%, #FF9800 100%)',
-            borderRadius: '50%',
-            opacity: 0.1
-          }} />
+        {/* About Us Section - Rapido Style */}
+        <section 
+          data-section="about"
+          style={{ 
+            ...getCardStyles(),
+            padding: '60px 40px', 
+            borderRadius: '24px',
+            marginBottom: '24px',
+            position: 'relative',
+            overflow: 'hidden',
+            background: preferences.theme === 'dark' ? 
+              'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.9) 100%)' : 
+              'linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(59, 130, 246, 0.2)',
+            boxShadow: '0 20px 60px rgba(59, 130, 246, 0.15)'
+          }}>
           
-          <div style={{ position: 'relative', zIndex: 2 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'linear-gradient(135deg, #F44336 0%, #FF9800 100%)',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '18px',
-                  color: 'white'
-                }}>
-                  <FontAwesomeIcon icon={faExclamationTriangle} />
-                </div>
-                <h3 style={{ 
-                  margin: 0, 
-                  fontSize: 'var(--font-size-xl)', 
-                  fontWeight: 'var(--font-weight-semibold)',
+          {/* About Us Heading */}
+          <div style={{ 
+            textAlign: 'left',
+            marginBottom: '40px'
+          }}>
+            <h1 style={{ 
+              margin: '0 0 8px 0', 
+              fontSize: '24px', 
+              fontWeight: '600',
+              fontFamily: 'var(--font-heading)',
+              color: '#000000',
+              textTransform: 'uppercase',
+              letterSpacing: '2px'
+            }}>
+              About Us
+            </h1>
+          </div>
+          
+          <div style={{ 
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '60px',
+            alignItems: 'center',
+            position: 'relative',
+            zIndex: 2
+          }}>
+            {/* Left Content */}
+            <div>
+              <h2 style={{ 
+                margin: '0 0 12px 0', 
+                fontSize: '48px', 
+                fontWeight: '800',
+                fontFamily: 'var(--font-heading)',
+                letterSpacing: '-0.02em',
+                lineHeight: '1.1',
+                ...getTextStyles('primary')
+              }}>
+                Chennai's Beloved
+              </h2>
+              <h3 style={{ 
+                margin: '0 0 24px 0', 
+                fontSize: '36px', 
+                fontWeight: '700',
+                fontFamily: 'var(--font-heading)',
+                letterSpacing: '-0.01em',
+                lineHeight: '1.2',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text'
+              }}>
+                Accessible Navigation Service
+              </h3>
+              
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ 
+                  margin: '0 0 16px 0', 
+                  fontSize: '18px', 
+                  fontWeight: '600',
                   fontFamily: 'var(--font-heading)',
-                  letterSpacing: 'var(--letter-spacing-tight)',
                   ...getTextStyles('primary')
                 }}>
-                  Recent Alerts
-                </h3>
+                  We are not an option, we are a choice
+                </h4>
+                <p style={{ 
+                  margin: '0 0 20px 0', 
+                  fontSize: '16px',
+                  fontFamily: 'var(--font-secondary)',
+                  lineHeight: '1.6',
+                  ...getTextStyles('secondary')
+                }}>
+                  We're the #1 choice of millions of people with disabilities because we're the 
+                  complete solution to Chennai's accessibility challenges. With assured safety, 
+                  we provide barrier-free navigation and economically accessible routes. Our mission 
+                  is to make Chennai accessible for everyone, ensuring that mobility challenges 
+                  never limit your potential to explore, work, and live independently.
+                </p>
               </div>
-              <button 
-                onClick={() => navigate('/alerts')}
-                style={{
-                  ...getButtonStyles('ghost'),
+
+              <div style={{ marginBottom: '32px' }}>
+                <h4 style={{ 
+                  margin: '0 0 16px 0', 
+                  fontSize: '18px', 
+                  fontWeight: '600',
+                  fontFamily: 'var(--font-heading)',
+                  ...getTextStyles('primary')
+                }}>
+                  What makes us different?
+                </h4>
+                <p style={{ 
+                  margin: 0, 
+                  fontSize: '16px',
+                  fontFamily: 'var(--font-secondary)',
+                  lineHeight: '1.6',
+                  ...getTextStyles('secondary')
+                }}>
+                  Our intelligent accessibility features can navigate around barriers during peak hours and get 
+                  you to your destination with confidence and ease! From voice-guided navigation to real-time 
+                  accessibility updates, we ensure every journey is smooth and inclusive.
+                </p>
+              </div>
+
+              {/* Key Features Summary */}
+              <div style={{
+                padding: '24px',
+                background: preferences.theme === 'dark' ? 
+                  'rgba(59, 130, 246, 0.1)' : 
+                  'rgba(59, 130, 246, 0.05)',
+                borderRadius: '16px',
+                border: '1px solid rgba(59, 130, 246, 0.2)'
+              }}>
+                <h5 style={{ 
+                  margin: '0 0 12px 0', 
+                  fontSize: '16px', 
+                  fontWeight: '600',
+                  fontFamily: 'var(--font-heading)',
+                  color: '#3b82f6'
+                }}>
+                  🚀 Core Features
+                </h5>
+                <p style={{ 
+                  margin: 0, 
                   fontSize: '14px',
-                  fontWeight: '500',
-                  padding: '8px 16px'
-                }}
-              >
-                View All →
-              </button>
+                  fontFamily: 'var(--font-secondary)',
+                  lineHeight: '1.5',
+                  ...getTextStyles('secondary')
+                }}>
+                  <strong>Voice Navigation</strong> • <strong>Wheelchair Routes</strong> • <strong>Visual/Audio Aids</strong> • <strong>Real-time Metro/Bus</strong> • <strong>Community Support</strong> • <strong>Emergency Assistance</strong> • <strong>Offline Maps</strong> • <strong>Multi-language Support</strong>
+                </p>
+              </div>
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {recentAlerts.map((alert, index) => (
-                <div 
-                  key={index} 
-                  style={{
-                    padding: '16px',
-                    background: 'rgba(244, 67, 54, 0.05)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(244, 67, 54, 0.1)',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                    <div style={{
-                      width: '16px',
-                      height: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginTop: '4px',
-                      flexShrink: 0,
-                      color: alert.type === 'urgent' ? '#F44336' : '#FF9800'
+
+            {/* Right Visual */}
+            <div style={{ 
+              position: 'relative',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}>
+              {/* Main circular design inspired by Rapido */}
+              <div style={{
+                width: '320px',
+                height: '320px',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                boxShadow: '0 20px 60px rgba(59, 130, 246, 0.3)'
+              }}>
+                {/* Inner circle */}
+                <div style={{
+                  width: '240px',
+                  height: '240px',
+                  background: preferences.theme === 'dark' ? 
+                    'rgba(30, 41, 59, 0.9)' : 
+                    'rgba(255, 255, 255, 0.95)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  {/* Accessibility icon */}
+                  <div style={{
+                    fontSize: '48px',
+                    marginBottom: '16px',
+                    color: '#3b82f6'
+                  }}>
+                    ♿
+                  </div>
+                  <div style={{
+                    textAlign: 'center'
+                  }}>
+                    <div style={{ 
+                      fontSize: '24px', 
+                      fontWeight: '700',
+                      fontFamily: 'var(--font-heading)',
+                      color: '#3b82f6',
+                      marginBottom: '8px'
                     }}>
-                      <FontAwesomeIcon icon={faCircle} size="xs" />
+                      50K+
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ 
-                        margin: '0 0 4px 0', 
-                        fontSize: 'var(--font-size-sm)', 
-                        fontWeight: 'var(--font-weight-medium)',
-                        fontFamily: 'var(--font-secondary)',
-                        ...getTextStyles('primary')
-                      }}>
-                        {alert.message || alert.msg}
-                      </p>
-                      <p style={{ 
-                        margin: 0, 
-                        fontSize: 'var(--font-size-xs)',
-                        fontFamily: 'var(--font-ui)',
-                        ...getTextStyles('secondary')
-                      }}>
-                        {alert.time} • {alert.location || 'Chennai'}
-                      </p>
+                    <div style={{ 
+                      fontSize: '14px',
+                      fontFamily: 'var(--font-ui)',
+                      ...getTextStyles('secondary')
+                    }}>
+                      Happy Users
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
 
-        {/* Emergency Contact */}
-        <section style={{ 
-          background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)', 
-          color: '#fff',
-          padding: '24px', 
-          borderRadius: '16px',
-          textAlign: 'center',
-          boxShadow: '0 4px 20px rgba(238, 90, 36, 0.3)',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Decorative elements */}
-          <div style={{
-            position: 'absolute',
-            top: '-20px',
-            left: '-20px',
-            width: '60px',
-            height: '60px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '50%'
-          }} />
-          <div style={{
-            position: 'absolute',
-            bottom: '-30px',
-            right: '-30px',
-            width: '80px',
-            height: '80px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '50%'
-          }} />
-          
-          <div style={{ position: 'relative', zIndex: 2 }}>
-            <div style={{
-              fontSize: '32px',
-              marginBottom: '12px',
-              color: 'white'
-            }}>
-              <FontAwesomeIcon icon={faPhoneAlt} />
+                {/* Floating stats */}
+                <div style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '-20px',
+                  background: preferences.theme === 'dark' ? 
+                    'rgba(30, 41, 59, 0.95)' : 
+                    'rgba(255, 255, 255, 0.95)',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <div style={{ 
+                    fontSize: '16px', 
+                    fontWeight: '600',
+                    color: '#3b82f6',
+                    marginBottom: '4px'
+                  }}>
+                    100K+
+                  </div>
+                  <div style={{ 
+                    fontSize: '12px',
+                    ...getTextStyles('secondary')
+                  }}>
+                    Routes
+                  </div>
+                </div>
+
+                <div style={{
+                  position: 'absolute',
+                  bottom: '20px',
+                  left: '-20px',
+                  background: preferences.theme === 'dark' ? 
+                    'rgba(30, 41, 59, 0.95)' : 
+                    'rgba(255, 255, 255, 0.95)',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <div style={{ 
+                    fontSize: '16px', 
+                    fontWeight: '600',
+                    color: '#8b5cf6',
+                    marginBottom: '4px'
+                  }}>
+                    99%
+                  </div>
+                  <div style={{ 
+                    fontSize: '12px',
+                    ...getTextStyles('secondary')
+                  }}>
+                    Satisfaction
+                  </div>
+                </div>
+              </div>
             </div>
-            <h4 style={{ 
-              margin: '0 0 8px 0', 
-              fontSize: 'var(--font-size-lg)', 
-              fontWeight: 'var(--font-weight-semibold)',
-              fontFamily: 'var(--font-heading)'
-            }}>
-              Emergency Assistance
-            </h4>
-            <p style={{ 
-              margin: '0 0 20px 0', 
-              fontSize: 'var(--font-size-sm)', 
-              fontFamily: 'var(--font-secondary)',
-              opacity: 0.9 
-            }}>
-              Immediate help is just a tap away
-            </p>
-            <button 
-              onClick={() => window.location.href = 'tel:112'}
-              style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                color: '#fff',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                padding: '12px 24px',
-                borderRadius: '25px',
-                fontSize: 'var(--font-size-base)',
-                fontWeight: 'var(--font-weight-semibold)',
-                fontFamily: 'var(--font-ui)',
-                letterSpacing: 'var(--letter-spacing-wide)',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                backdropFilter: 'blur(10px)'
-              }}
-              onMouseOver={(e) => {
-                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.transform = 'translateY(-2px)';
-              }}
-              onMouseOut={(e) => {
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                e.target.style.transform = 'translateY(0)';
-              }}
-            >
-              Call Emergency (112)
-            </button>
           </div>
+
+          {/* Mobile responsive adjustments */}
+          <style>{`
+            @media (max-width: 768px) {
+              [data-section="about"] > div > div {
+                grid-template-columns: 1fr !important;
+                gap: 40px !important;
+                text-align: center;
+              }
+              [data-section="about"] h2 {
+                font-size: 36px !important;
+              }
+              [data-section="about"] h3 {
+                font-size: 28px !important;
+              }
+            }
+          `}</style>
         </section>
       </main>
 
