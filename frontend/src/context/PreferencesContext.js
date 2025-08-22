@@ -14,7 +14,8 @@ export const PreferencesProvider = ({ children }) => {
   const [preferences, setPreferences] = useState({
     language: 'en',
     theme: 'light',
-    mode: 'normal'
+    mode: 'normal',
+    screenReader: false
   });
 
   const [isLoaded, setIsLoaded] = useState(false);
@@ -27,7 +28,8 @@ export const PreferencesProvider = ({ children }) => {
       let localPrefs = {
         language: 'en',
         theme: 'light',
-        mode: 'normal'
+        mode: 'normal',
+        screenReader: false
       };
       
       if (savedPrefs) {
@@ -36,7 +38,8 @@ export const PreferencesProvider = ({ children }) => {
           localPrefs = {
             language: parsed.language || 'en',
             theme: parsed.theme || 'light',
-            mode: parsed.mode || 'normal'
+            mode: parsed.mode || 'normal',
+            screenReader: parsed.screenReader || false
           };
         } catch (error) {
           console.error('Error parsing preferences:', error);
@@ -88,35 +91,44 @@ export const PreferencesProvider = ({ children }) => {
       light: {
         '--bg-primary': 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
         '--bg-secondary': '#ffffff',
+        '--bg-tertiary': '#f8f9fa',
+        '--bg-hover': '#f0f0f0',
         '--text-primary': '#333333',
         '--text-secondary': '#666666',
         '--accent-color': '#1976d2',
         '--border-color': '#e0e0e0',
         '--shadow': '0 4px 20px rgba(0,0,0,0.08)',
         '--card-bg': '#ffffff',
-        '--nav-bg': '#ffffff'
+        '--nav-bg': '#ffffff',
+        '--input-bg': '#ffffff'
       },
       dark: {
         '--bg-primary': 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)',
         '--bg-secondary': '#2d2d2d',
+        '--bg-tertiary': '#1f2937',
+        '--bg-hover': '#404040',
         '--text-primary': '#ffffff',
         '--text-secondary': '#b0b0b0',
         '--accent-color': '#42a5f5',
         '--border-color': '#404040',
         '--shadow': '0 4px 20px rgba(0,0,0,0.3)',
         '--card-bg': '#333333',
-        '--nav-bg': '#2d2d2d'
+        '--nav-bg': '#2d2d2d',
+        '--input-bg': '#2d2d2d'
       },
       'high-contrast': {
         '--bg-primary': '#000000',
         '--bg-secondary': '#000000',
+        '--bg-tertiary': '#000000',
+        '--bg-hover': '#333333',
         '--text-primary': '#ffffff',
         '--text-secondary': '#ffff00',
         '--accent-color': '#00ff00',
         '--border-color': '#ffffff',
         '--shadow': '0 4px 20px rgba(255,255,255,0.3)',
         '--card-bg': '#000000',
-        '--nav-bg': '#000000'
+        '--nav-bg': '#000000',
+        '--input-bg': '#000000'
       }
     };
 
@@ -141,6 +153,53 @@ export const PreferencesProvider = ({ children }) => {
     } else {
       root.classList.remove('voice-mode');
       root.style.setProperty('--focus-outline', '2px solid #1976d2');
+    }
+
+    // Apply screen reader functionality
+    if (preferences.screenReader) {
+      root.classList.add('screen-reader-enabled');
+      // Add global hover event listeners for screen reader
+      const handleMouseEnter = (e) => {
+        const text = e.target.textContent || e.target.alt || e.target.title || e.target.placeholder;
+        if (text && text.trim()) {
+          // Cancel any ongoing speech
+          if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+          }
+          // Speak the text
+          setTimeout(() => {
+            if (window.speechSynthesis) {
+              const utterance = new SpeechSynthesisUtterance(text.trim());
+              utterance.rate = 0.8;
+              utterance.volume = 0.7;
+              window.speechSynthesis.speak(utterance);
+            }
+          }, 100);
+        }
+      };
+
+      // Add event listeners to all interactive elements
+      const elements = document.querySelectorAll('button, a, input, textarea, select, [role="button"], [tabindex], h1, h2, h3, h4, h5, h6, p, span, div[onclick], label');
+      elements.forEach(element => {
+        element.addEventListener('mouseenter', handleMouseEnter);
+      });
+
+      // Store the handler for cleanup
+      root._screenReaderHandler = handleMouseEnter;
+    } else {
+      root.classList.remove('screen-reader-enabled');
+      // Remove existing event listeners
+      if (root._screenReaderHandler) {
+        const elements = document.querySelectorAll('button, a, input, textarea, select, [role="button"], [tabindex], h1, h2, h3, h4, h5, h6, p, span, div[onclick], label');
+        elements.forEach(element => {
+          element.removeEventListener('mouseenter', root._screenReaderHandler);
+        });
+        delete root._screenReaderHandler;
+      }
+      // Cancel any ongoing speech
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
     }
 
   }, [preferences, isLoaded]);
@@ -316,6 +375,11 @@ export const PreferencesProvider = ({ children }) => {
         chooseInputMethod: 'Choose your input method',
         normalMode: 'Normal Mode',
         voiceMode: 'Voice Mode',
+        screenReader: 'Screen Reader Compatibility',
+        screenReaderDescription: 'Enable text-to-speech when hovering over text, buttons, and other elements',
+        screenReaderEnabled: 'Screen reader is active. Hover over any text, button, or element to hear it spoken aloud.',
+        enabled: 'Enabled',
+        disabled: 'Disabled',
         notifications: 'Notifications',
         manageNotifications: 'Manage your notification preferences',
         alertNotifications: 'Alert Notifications',
@@ -343,6 +407,25 @@ export const PreferencesProvider = ({ children }) => {
         appDescription: 'Making Chennai more accessible for everyone.',
         
         // Navigate page
+        chennai: 'Chennai',
+        general: 'General',
+        bus: 'Bus',
+        buses: 'Buses',
+        metro: 'Metro',
+        chennaiMetro: 'Chennai Metro',
+        delete: 'Delete',
+        updates: 'Updates',
+        help: 'Help',
+        posts: 'Posts',
+        allPosts: 'All Posts',
+        tamil: 'Tamil',
+        home: 'Home',
+        back: 'Back',
+        post: 'Post',
+        filter: 'Filter',
+        access: 'Access',
+        emergency: 'Emergency',
+        communityDescription: 'Connect, share experiences, and help each other navigate Chennai accessibly',
         findRoute: 'Find Your Route',
         discoverAccessibleRoutes: 'Discover accessible routes tailored to your needs',
         from: 'From',
@@ -426,7 +509,12 @@ export const PreferencesProvider = ({ children }) => {
         activateVoice: 'Start Voice Recognition',
         saving: 'Saving preferences...',
         errorSavingPreferences: 'Failed to save preferences. Please try again.',
-        continuousListening: 'Voice recognition is active. Say "Voice Mode" or "Normal Mode"'
+        continuousListening: 'Voice recognition is active. Say "Voice Mode" or "Normal Mode"',
+        
+        // Community page additional
+        whatsOnYourMind: "What's on your mind?",
+        shareThoughts: 'Share your thoughts, ask questions, or report accessibility updates...',
+        createPost: 'Create Post'
       },
       ta: {
         // Navigation
@@ -469,6 +557,11 @@ export const PreferencesProvider = ({ children }) => {
         chooseInputMethod: 'உங்கள் உள்ளீட்டு முறையை தேர்ந்தெடுக்கவும்',
         normalMode: 'சாதாரண முறை',
         voiceMode: 'குரல் முறை',
+        screenReader: 'திரை வாசகர் இணக்கம்',
+        screenReaderDescription: 'உரை, பொத்தான்கள் மற்றும் பிற கூறுகளின் மேல் சுட்டிக் கொண்டிருக்கும் போது உரையிலிருந்து பேச்சுக்கு இயக்கவும்',
+        screenReaderEnabled: 'திரை வாசகர் செயலில் உள்ளது. ஏதேனும் உரை, பொத்தான் அல்லது கூறுகளின் மேல் வைக்கவும் அது உச்சரிக்கப்படும்.',
+        enabled: 'இயக்கப்பட்டது',
+        disabled: 'முடக்கப்பட்டது',
         notifications: 'அறிவிப்புகள்',
         manageNotifications: 'உங்கள் அறிவிப்பு விருப்பங்களை நிர்வகிக்கவும்',
         alertNotifications: 'எச்சரிக்கை அறிவிப்புகள்',
@@ -494,6 +587,103 @@ export const PreferencesProvider = ({ children }) => {
         confirmClearData: 'அனைத்து தரவையும் அழிக்க வேண்டுமா? இதை செயல்தவிர்க்க முடியாது.',
         about: 'பற்றி',
         appDescription: 'அனைவருக்கும் சென்னையை மேலும் அணுகக்கூடியதாக மாற்றுதல்.',
+        
+        // Navigate page
+        chennai: 'சென்னை',
+        general: 'பொது',
+        bus: 'பேருந்து',
+        buses: 'பேருந்துகள்',
+        metro: 'மெட்ரோ',
+        chennaiMetro: 'சென்னை மெட்ரோ',
+        delete: 'அழிக்க',
+        updates: 'புதுப்பிப்புகள்',
+        help: 'உதவி',
+        posts: 'இடுகைகள்',
+        allPosts: 'அனைத்து இடுகைகள்',
+        tamil: 'தமிழ்',
+        home: 'முகப்பு',
+        back: 'திரும்பு',
+        post: 'புதிய',
+        filter: 'வடிகட்டு',
+        access: 'அணுகல்',
+        emergency: 'அவசர',
+        communityDescription: 'இணைக்கவும், அனுபவங்களைப் பகிரவும், சென்னையை அணுகக்கூடிய வகையில் வழிசெலுத்த ஒருவருக்கொருவர் உதவவும்',
+        findRoute: 'உங்கள் பாதையைக் கண்டறியவும்',
+        discoverAccessibleRoutes: 'உங்கள் தேவைகளுக்கு ஏற்ப அணுகக்கூடிய வழிகளைக் கண்டறியுங்கள்',
+        from: 'இருந்து',
+        to: 'வரை',
+        enterStartingLocation: 'தொடக்க இடத்தை உள்ளிடவும்',
+        enterDestination: 'இலக்கை உள்ளிடவும்',
+        accessibilityRequirements: 'அணுகல் தேவைகள்',
+        wheelchairAccess: 'சக்கர நாற்காலி அணுகல்',
+        elevatorAvailable: 'மின்தூக்கி கிடைக்கும்',
+        audioAnnouncements: 'ஒலி அறிவிப்புகள்',
+        brailleTactileSigns: 'பிரெய்லி/தொடு அறிகுறிகள்',
+        findRoutes: 'வழிகளைக் கண்டறியவும்',
+        searching: 'தேடுகிறது...',
+        availableRoutes: 'கிடைக்கும் வழிகள்',
+        recommended: 'பரிந்துரைக்கப்பட்டது',
+        route: 'பாதை',
+        steps: 'படிகள்',
+        accessibilityFeatures: 'அணுகல் அம்சங்கள்',
+        yourSavedRoutes: 'உங்கள் சேமித்த வழிகள்',
+        savedOn: 'சேமிக்கப்பட்டது',
+        filters: 'வடிகட்டிகள்',
+        useCurrentLocation: 'தற்போதைய இடத்தைப் பயன்படுத்தவும்',
+        frequentLocations: 'அடிக்கடி இடங்கள்',
+        frequentDestinations: 'அடிக்கடி இலக்குகள்',
+        routeMap: 'வழித்தட வரைபடம்',
+        wheelchairAccess: 'சக்கர நாற்காலி அணுகல்',
+        elevator: 'மின்தூக்கி',
+        audioSignals: 'ஒலி சிக்னல்கள்',
+        braille: 'பிரெய்லி',
+        barriers: 'தடைகள்',
+        accessibilityScore: 'அணுகல் மதிப்பெண்',
+        carbonFootprint: 'கார்பன் தடம்',
+        crowdLevel: 'கூட்ட அளவு',
+        readRouteDetails: 'வழித்தட விவரங்களைப் படிக்கவும்',
+        
+        // Alerts page
+        realTimeAlerts: 'நிகழ்நேர எச்சரிக்கைகள்',
+        stayUpdated: 'சென்னை முழுவதும் லைவ் போக்குவரத்து மற்றும் அணுகல் எச்சரிக்கைகளுடன் புதுப்பித்த நிலையில் இருங்கள்',
+        chennaiMetroLive: 'சென்னை மெட்ரோ லைவ்',
+        lastUpdated: 'கடைசியாக புதுப்பிக்கப்பட்டது',
+        live: 'நேரலை',
+        allServicesNormal: 'அனைத்து மெட்ரோ சேவைகளும் சாதாரணமாக இயங்குகின்றன',
+        reportIssue: 'சிக்கலைப் புகாரளிக்கவும்',
+        category: 'வகை',
+        locationOptional: 'இடம் (விருப்பம்)',
+        alertMessage: 'எச்சரிக்கை செய்தி',
+        describeIssue: 'சிக்கலை அல்லது எச்சரிக்கையை விவரிக்கவும்...',
+        postAlert: 'எச்சரிக்கையை பதிவிடவும்',
+        communityReports: 'சமூக அறிக்கைகள்',
+        refresh: 'புதுப்பிக்க',
+        noAlertsYet: 'இதுவரை சமூக எச்சரிக்கைகள் இல்லை. சிக்கல் குறித்து முதலில் புகாரளிப்பவர் நீங்களே!',
+        location: 'இடம்',
+        transport: 'போக்குவரத்து',
+        accessibility: 'அணுகல்',
+        roadway: 'சாலை',
+        weather: 'வானிலை',
+        emergency: 'அவசரம்',
+        
+        // Community page
+        welcomeToCommunity: 'சமூகப் பக்கத்திற்கு வரவேற்கிறோம். நீங்கள் கூறலாம்: போஸ்ட், வடிகட்டு, முகப்பு, பின்னோக்கி அல்லது உதவி',
+        goingHome: 'முகப்புக்கு செல்கிறது',
+        goingBack: 'திரும்புகிறது',
+        createPost: 'புதிய இடுகை உருவாக்குகிறது',
+        changeFilter: 'வடிகட்டியை மாற்றுகிறது',
+        showingGeneral: 'பொது இடுகைகளைக் காட்டுகிறது',
+        showingAccessibility: 'அணுகல் இடுகைகளைக் காட்டுகிறது',
+        showingEmergency: 'அவசர இடுகைகளைக் காட்டுகிறது',
+        communityHelp: 'சமூக பக்கம். புதிய இடுகையை உருவாக்க பதிவு செய்யவும், வகையை மாற்ற வடிகட்டு, பொது இடுகைகளுக்கு பொது, அணுகல் இடுகைகளுக்கு அணுகல், அவசர இடுகைகளுக்கு அவசரம், முகப்பு பக்கத்திற்குச் செல்ல முகப்பு, அல்லது திரும்பச் செல்ல பின்னோக்கி என்று சொல்லுங்கள்',
+        
+        // Additional missing translations
+        general: 'பொது',
+        pleaseEnterBothLocations: 'தயவுசெய்து இருந்து மற்றும் வரை இடங்களை உள்ளிடவும்',
+        failedToFindRoutes: 'வழிகளைக் கண்டறிய முடியவில்லை. தயவுசெய்து மீண்டும் முயற்சிக்கவும்.',
+        whatsOnYourMind: 'உங்கள் மனதில் என்ன இருக்கிறது?',
+        describeEmergency: 'உங்கள் அவசர நிலையை விவரிக்கவும்...',
+        shareThoughts: 'உங்கள் எண்ணங்களைப் பகிருங்கள், கேள்விகள் கேளுங்கள், அல்லது அணுகல் புதுப்பிப்புகளை புகாரளிக்கவும்...',
         
         // Themes
         light: 'ஒளி',

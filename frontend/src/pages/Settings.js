@@ -86,10 +86,10 @@ function Settings() {
           } else if (cleanCommand.includes('dark') && cleanCommand.includes('theme')) {
             updatePreferences({ theme: 'dark' });
             speak('Dark theme selected');
-          } else if (cleanCommand.includes('home') || cleanCommand.includes('முகப்பு')) {
+          } else if (cleanCommand.includes('home') || cleanCommand.includes(getText('home'))) {
             speak(getText('goingHome', 'Going to Home'));
             window.location.href = '/';
-          } else if (cleanCommand.includes('help') || cleanCommand.includes('உதவி')) {
+          } else if (cleanCommand.includes('help') || cleanCommand.includes(getText('help'))) {
             speak(getText('settingsHelp', 'Settings page. Say: voice mode to enable voice interaction, normal mode for touch, light theme or dark theme to change appearance, home to go to home page'));
           }
         });
@@ -154,13 +154,13 @@ function Settings() {
   ];
 
   const languageOptions = [
-    { value: 'en', label: 'English', icon: '🇺🇸' },
-    { value: 'ta', label: 'தமிழ்', icon: '🇮🇳' }
+    { value: 'en', label: 'English', icon: '' },
+    { value: 'ta', label: getText('tamil'), icon: '' }
   ];
 
   const modeOptions = [
-    { value: 'normal', label: getText('normalMode'), icon: '👆' },
-    { value: 'voice', label: getText('voiceMode'), icon: '🎤' }
+    { value: 'normal', label: getText('normalMode'), icon: '' },
+    { value: 'voice', label: getText('voiceMode'), icon: '' }
   ];
 
   const VoiceActivationButton = () => {
@@ -343,7 +343,11 @@ function Settings() {
       }}
     >
       <span style={{ fontSize: 20 }}>
-        <FontAwesomeIcon icon={option.icon} />
+        {typeof option.icon === 'string' ? (
+          option.icon
+        ) : (
+          <FontAwesomeIcon icon={option.icon} />
+        )}
       </span>
       <span>{option.label}</span>
     </button>
@@ -366,7 +370,7 @@ function Settings() {
 
   return (
     <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
-      <Navigation user={user} onLogout={handleLogout} />
+      <Navigation user={user} />
 
       <main style={{ padding: '20px', maxWidth: 800, margin: '0 auto' }}>
         <header style={{ marginBottom: 32, textAlign: 'center' }}>
@@ -435,7 +439,7 @@ function Settings() {
             fontSize: 16,
             fontWeight: 500
           }}>
-            ✅ {getText('settingsSaved')}
+            {getText('settingsSaved')}
           </div>
         )}
 
@@ -498,6 +502,74 @@ function Settings() {
               />
             ))}
           </div>
+        </SettingCard>
+
+        {/* Screen Reader Compatibility */}
+        <SettingCard 
+          title={getText('screenReader')} 
+          description={getText('screenReaderDescription')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              cursor: 'pointer',
+              fontSize: 16,
+              fontWeight: 500,
+              ...getTextStyles('primary')
+            }}>
+              <div style={{
+                position: 'relative',
+                width: 50,
+                height: 28,
+                backgroundColor: preferences.screenReader ? '#4caf50' : '#ccc',
+                borderRadius: 14,
+                transition: 'background-color 0.3s',
+                cursor: 'pointer'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={preferences.screenReader}
+                  onChange={(e) => updatePreferences({ screenReader: e.target.checked })}
+                  style={{
+                    opacity: 0,
+                    position: 'absolute',
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'pointer'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  top: 2,
+                  left: preferences.screenReader ? 24 : 2,
+                  width: 24,
+                  height: 24,
+                  backgroundColor: '#fff',
+                  borderRadius: '50%',
+                  transition: 'left 0.3s',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }} />
+              </div>
+              <span>
+                {preferences.screenReader ? getText('enabled') : getText('disabled')}
+              </span>
+            </label>
+          </div>
+          {preferences.screenReader && (
+            <div style={{
+              marginTop: 16,
+              padding: 12,
+              borderRadius: 8,
+              backgroundColor: '#e8f5e8',
+              border: '1px solid #4caf50',
+              fontSize: 14,
+              color: '#2e7d32'
+            }}>
+              {getText('screenReaderEnabled')}
+            </div>
+          )}
         </SettingCard>
 
         {/* Notification Settings */}
@@ -573,7 +645,6 @@ function Settings() {
                 gap: 12
               }}
             >
-              <span>📥</span>
               {getText('exportData')}
             </button>
             
@@ -591,7 +662,6 @@ function Settings() {
                 gap: 12
               }}
             >
-              <span>💾</span>
               {getText('saveSettings')}
             </button>
 
@@ -658,6 +728,38 @@ function Settings() {
               ...getTextStyles('secondary')
             }}>
               {getText('appDescription')}
+            </p>
+          </div>
+        </SettingCard>
+
+        {/* Account Actions */}
+        <SettingCard title={getText('account')}>
+          <div style={{ textAlign: 'center' }}>
+            <button
+              onClick={handleLogout}
+              style={{
+                ...getButtonStyles('danger'),
+                padding: '16px 24px',
+                borderRadius: 12,
+                fontSize: 16,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 12,
+                width: '100%',
+                maxWidth: '300px',
+                margin: '0 auto'
+              }}
+            >
+              {getText('logout')}
+            </button>
+            <p style={{
+              margin: '12px 0 0 0',
+              fontSize: 14,
+              ...getTextStyles('secondary')
+            }}>
+              Sign out of your account and return to login page
             </p>
           </div>
         </SettingCard>

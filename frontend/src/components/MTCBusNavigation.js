@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import MTCBusService from '../services/MTCBusService';
+import { usePreferences } from '../context/PreferencesContext';
 
 const MTCBusNavigation = () => {
+  const { preferences } = usePreferences();
   const [fromArea, setFromArea] = useState('');
   const [toArea, setToArea] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -187,13 +189,48 @@ const MTCBusNavigation = () => {
                 autoComplete="off"
               />
               {searchResults.from.length > 0 && showDropdown.from && (
-                <div className="search-dropdown">
-                  <div className="dropdown-header">Areas ({searchResults.from.length})</div>
+                <div className="search-dropdown" style={{ 
+                  backgroundColor: 'var(--input-bg)', 
+                  border: '1px solid var(--border-color)', 
+                  color: 'var(--text-primary)' 
+                }}>
+                  <div className="dropdown-header" style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    color: 'var(--text-primary)', 
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}>
+                    <span>Areas ({searchResults.from.length})</span>
+                    <button 
+                      onClick={() => setShowDropdown(prev => ({ ...prev, from: false }))}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                   {searchResults.from.map((area, index) => (
                     <div
                       key={index}
                       className="search-result-item"
                       onClick={() => selectArea(area, 'from')}
+                      style={{ 
+                        color: 'var(--text-primary)',
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                     >
                       📍 {area}
                     </div>
@@ -220,13 +257,48 @@ const MTCBusNavigation = () => {
                 autoComplete="off"
               />
               {searchResults.to.length > 0 && showDropdown.to && (
-                <div className="search-dropdown">
-                  <div className="dropdown-header">Areas ({searchResults.to.length})</div>
+                <div className="search-dropdown" style={{ 
+                  backgroundColor: 'var(--input-bg)', 
+                  border: '1px solid var(--border-color)', 
+                  color: 'var(--text-primary)' 
+                }}>
+                  <div className="dropdown-header" style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    color: 'var(--text-primary)', 
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderBottom: '1px solid var(--border-color)'
+                  }}>
+                    <span>Areas ({searchResults.to.length})</span>
+                    <button 
+                      onClick={() => setShowDropdown(prev => ({ ...prev, to: false }))}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
                   {searchResults.to.map((area, index) => (
                     <div
                       key={index}
                       className="search-result-item"
                       onClick={() => selectArea(area, 'to')}
+                      style={{ 
+                        color: 'var(--text-primary)',
+                        backgroundColor: 'transparent'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-hover)'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                     >
                       📍 {area}
                     </div>
@@ -329,10 +401,44 @@ const MTCBusNavigation = () => {
               autoComplete="off"
             />
             {(searchResults.stops.length > 0 || searchResults.areas.length > 0) && showDropdown.search && (
-              <div className="search-dropdown">
+              <div className="search-dropdown" style={{ 
+                backgroundColor: 'var(--input-bg)', 
+                border: '1px solid var(--border-color)', 
+                color: 'var(--text-primary)' 
+              }}>
+                <div className="dropdown-header" style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  color: 'var(--text-primary)', 
+                  backgroundColor: 'var(--bg-tertiary)',
+                  borderBottom: '1px solid var(--border-color)'
+                }}>
+                  <span>Search Results</span>
+                  <button 
+                    onClick={() => setShowDropdown(prev => ({ ...prev, search: false }))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
                 {searchResults.stops.length > 0 && (
                   <>
-                    <div className="dropdown-header">Bus Stops</div>
+                    <div className="dropdown-header" style={{ 
+                      color: 'var(--text-secondary)', 
+                      backgroundColor: 'var(--bg-tertiary)',
+                      borderBottom: '1px solid var(--border-color)'
+                    }}>Bus Stops</div>
                     {searchResults.stops.map((stop, index) => (
                       <div
                         key={index}
@@ -342,6 +448,12 @@ const MTCBusNavigation = () => {
                           loadLiveBusTimings(stop);
                           setShowDropdown(prev => ({ ...prev, search: false }));
                         }}
+                        style={{ 
+                          color: 'var(--text-primary)',
+                          backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-hover)'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                       >
                         🚏 {stop}
                       </div>
@@ -350,7 +462,11 @@ const MTCBusNavigation = () => {
                 )}
                 {searchResults.areas.length > 0 && (
                   <>
-                    <div className="dropdown-header">Areas</div>
+                    <div className="dropdown-header" style={{ 
+                      color: 'var(--text-secondary)', 
+                      backgroundColor: 'var(--bg-tertiary)',
+                      borderBottom: '1px solid var(--border-color)'
+                    }}>Areas</div>
                     {searchResults.areas.map((area, index) => (
                       <div
                         key={index}
@@ -360,6 +476,12 @@ const MTCBusNavigation = () => {
                           loadLiveBusTimings(area);
                           setShowDropdown(prev => ({ ...prev, search: false }));
                         }}
+                        style={{ 
+                          color: 'var(--text-primary)',
+                          backgroundColor: 'transparent'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-hover)'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                       >
                         📍 {area}
                       </div>
@@ -437,8 +559,37 @@ const MTCBusNavigation = () => {
               autoComplete="off"
             />
             {searchResults.routes.length > 0 && showDropdown.search && (
-              <div className="search-dropdown">
-                <div className="dropdown-header">Routes ({searchResults.routes.length})</div>
+              <div className="search-dropdown" style={{ 
+                backgroundColor: 'var(--input-bg)', 
+                border: '1px solid var(--border-color)', 
+                color: 'var(--text-primary)' 
+              }}>
+                <div className="dropdown-header" style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  color: 'var(--text-primary)', 
+                  backgroundColor: 'var(--bg-tertiary)',
+                  borderBottom: '1px solid var(--border-color)'
+                }}>
+                  <span>Routes ({searchResults.routes.length})</span>
+                  <button 
+                    onClick={() => setShowDropdown(prev => ({ ...prev, search: false }))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-primary)',
+                      cursor: 'pointer',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
                 {searchResults.routes.map((route, index) => (
                   <div
                     key={index}
@@ -448,6 +599,12 @@ const MTCBusNavigation = () => {
                       setSearchQuery(`${route.routeNumber} - ${route.name}`);
                       setShowDropdown(prev => ({ ...prev, search: false }));
                     }}
+                    style={{ 
+                      color: 'var(--text-primary)',
+                      backgroundColor: 'transparent'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-hover)'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                   >
                     <div className="route-search-item">
                       <span className="route-number">{route.routeNumber}</span>

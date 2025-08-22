@@ -108,16 +108,16 @@ function Community() {
   ].sort();
 
   const categories = [
-    { value: 'general', label: 'General', color: '#1976d2' },
-    { value: 'accessibility', label: 'Accessibility Updates', color: '#4caf50' },
-    { value: 'emergency', label: 'Emergency Help', color: '#f44336' }
+    { value: 'general', label: getText('general'), color: '#1976d2' },
+    { value: 'accessibility', label: getText('accessibility') + ' ' + getText('updates'), color: '#4caf50' },
+    { value: 'emergency', label: getText('emergency') + ' ' + getText('help'), color: '#f44336' }
   ];
 
   const filters = [
-    { value: 'all', label: 'All Posts' },
-    { value: 'general', label: 'General' },
-    { value: 'accessibility', label: 'Accessibility Updates' },
-    { value: 'emergency', label: 'Emergency Help' }
+    { value: 'all', label: getText('allPosts') },
+    { value: 'general', label: getText('general') },
+    { value: 'accessibility', label: getText('accessibility') + ' ' + getText('updates') },
+    { value: 'emergency', label: getText('emergency') + ' ' + getText('help') }
   ];
 
   // Mock data for posts with comments and reactions
@@ -194,7 +194,7 @@ function Community() {
         setupSpeechRecognition((command) => {
           const cleanCommand = command.toLowerCase().trim();
           
-          if (cleanCommand.includes('home') || cleanCommand.includes('மुகப்பு')) {
+          if (cleanCommand.includes('home') || cleanCommand.includes(getText('home'))) {
             speak(getText('goingHome', 'Going to Home'));
             navigate('/');
           } else if (cleanCommand.includes('back') || cleanCommand.includes('திरும்பு')) {
@@ -427,7 +427,7 @@ function Community() {
 
   return (
     <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
-      <Navigation user={user} onLogout={handleLogout} />
+      <Navigation user={user} />
 
       <main style={{ padding: '20px', maxWidth: 1400, margin: '0 auto' }}>
         {/* Header */}
@@ -435,9 +435,16 @@ function Community() {
           ...getCardStyles(),
           padding: 24, 
           borderRadius: 16, 
-          marginBottom: 24
+          marginBottom: 24,
+          textAlign: 'center'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            gap: '12px', 
+            marginBottom: '8px'
+          }}>
             <h1 style={{ 
               margin: '0', 
               fontSize: 'var(--font-size-3xl)', 
@@ -446,7 +453,7 @@ function Community() {
               letterSpacing: 'var(--letter-spacing-tight)',
               ...getTextStyles('primary')
             }}>
-              Community Feed
+              {getText('community')}
             </h1>
             {isVoiceMode && (
               <div style={{
@@ -467,23 +474,25 @@ function Community() {
             )}
           </div>
           <p style={{ 
-            margin: 0, 
+            margin: '0 auto', 
             fontSize: 'var(--font-size-base)',
             fontFamily: 'var(--font-secondary)',
             lineHeight: 'var(--line-height-normal)',
+            maxWidth: '600px',
             ...getTextStyles('secondary')
           }}>
-            Connect, share experiences, and help each other navigate Chennai accessibly
+            {getText('communityDescription')}
           </p>
           {isVoiceMode && voiceFeedback && (
             <div style={{
-              margin: '12px 0',
+              margin: '12px auto 0',
               padding: '8px 16px',
               backgroundColor: '#e3f2fd',
               border: '1px solid #2196f3',
               borderRadius: '8px',
               fontSize: '14px',
-              color: '#1976d2'
+              color: '#1976d2',
+              maxWidth: '400px'
             }}>
               {voiceFeedback}
             </div>
@@ -506,14 +515,18 @@ function Community() {
                 style={{
                   background: 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
                   color: '#fff',
-                  border: 'none',
+                  border: preferences.theme === 'high-contrast' ? '2px solid #ffffff' : 'none',
                   padding: '16px 24px',
                   borderRadius: 12,
                   fontSize: 16,
                   fontWeight: 600,
                   cursor: 'pointer',
                   width: '100%',
-                  boxShadow: '0 4px 16px rgba(244, 67, 54, 0.3)',
+                  boxShadow: preferences.theme === 'dark' 
+                    ? '0 4px 16px rgba(244, 67, 54, 0.5)' 
+                    : preferences.theme === 'high-contrast'
+                    ? '0 4px 16px rgba(255, 255, 255, 0.3)'
+                    : '0 4px 16px rgba(244, 67, 54, 0.3)',
                   transition: 'all 0.2s',
                   display: 'flex',
                   alignItems: 'center',
@@ -522,35 +535,41 @@ function Community() {
                 }}
                 onMouseOver={e => {
                   e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 6px 20px rgba(244, 67, 54, 0.4)';
+                  e.target.style.boxShadow = preferences.theme === 'dark' 
+                    ? '0 6px 20px rgba(244, 67, 54, 0.6)' 
+                    : preferences.theme === 'high-contrast'
+                    ? '0 6px 20px rgba(255, 255, 255, 0.4)'
+                    : '0 6px 20px rgba(244, 67, 54, 0.4)';
                 }}
                 onMouseOut={e => {
                   e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 16px rgba(244, 67, 54, 0.3)';
+                  e.target.style.boxShadow = preferences.theme === 'dark' 
+                    ? '0 4px 16px rgba(244, 67, 54, 0.5)' 
+                    : preferences.theme === 'high-contrast'
+                    ? '0 4px 16px rgba(255, 255, 255, 0.3)'
+                    : '0 4px 16px rgba(244, 67, 54, 0.3)';
                 }}
               >
-                <FontAwesomeIcon icon={faExclamationTriangle} /> Emergency Help
+                <FontAwesomeIcon icon={faExclamationTriangle} /> {getText('emergency')} {getText('help')}
               </button>
             </div>
 
             {/* Category Filter */}
             <div style={{
-              background: '#fff',
+              ...getCardStyles(),
               padding: 20,
-              borderRadius: 12,
-              marginBottom: 24,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+              marginBottom: 24
             }}>
-              <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: 16, fontWeight: 600 }}>Filter Posts</h4>
+              <h4 style={{ margin: '0 0 12px 0', ...getTextStyles('primary'), fontSize: 16, fontWeight: 600 }}>{getText('filters')} {getText('posts')}</h4>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {filters.map(filter => (
                   <button
                     key={filter.value}
                     onClick={() => setFilterCategory(filter.value)}
                     style={{
-                      background: filterCategory === filter.value ? '#1976d2' : '#f5f5f5',
-                      color: filterCategory === filter.value ? '#fff' : '#666',
-                      border: 'none',
+                      background: filterCategory === filter.value ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                      color: filterCategory === filter.value ? '#fff' : 'var(--text-secondary)',
+                      border: `1px solid var(--border-color)`,
                       padding: '8px 16px',
                       borderRadius: 20,
                       fontSize: 14,
@@ -571,10 +590,8 @@ function Community() {
                 <div style={{ 
                   textAlign: 'center', 
                   padding: 40, 
-                  color: '#666',
-                  background: '#fff',
-                  borderRadius: 12,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                  ...getTextStyles('secondary'),
+                  ...getCardStyles()
                 }}>
                   <p>No posts yet. Be the first to share something with the community!</p>
                 </div>
@@ -583,21 +600,18 @@ function Community() {
                   <article
                     key={post.id}
                     style={{
-                      background: '#fff',
+                      ...getCardStyles(),
                       padding: 24,
-                      borderRadius: 16,
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                      border: '1px solid rgba(255,255,255,0.2)',
                       borderLeft: post.category === 'emergency' ? '4px solid #f44336' : 
                                  post.category === 'accessibility' ? '4px solid #4caf50' : 
-                                 '4px solid #1976d2'
+                                 '4px solid var(--accent-color)'
                     }}
                   >
                     {/* Post Header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontWeight: 600, color: '#333' }}>{post.username}</span>
+                          <span style={{ fontWeight: 600, ...getTextStyles('primary') }}>{post.username}</span>
                           <span 
                             style={{
                               ...getCategoryStyle(post.category),
@@ -624,18 +638,18 @@ function Community() {
                           )}
                         </div>
                         {post.location && (
-                          <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                          <div style={{ fontSize: 12, ...getTextStyles('secondary'), marginBottom: 4 }}>
                             <FontAwesomeIcon icon={faMapMarkerAlt} /> {post.location}
                           </div>
                         )}
                       </div>
-                      <span style={{ fontSize: 12, color: '#999' }}>
+                      <span style={{ fontSize: 12, ...getTextStyles('secondary') }}>
                         {formatTimeAgo(post.timestamp)}
                       </span>
                     </div>
 
                     {/* Post Content */}
-                    <div style={{ marginBottom: 16, lineHeight: 1.6, color: '#333', fontSize: 15 }}>
+                    <div style={{ marginBottom: 16, lineHeight: 1.6, ...getTextStyles('primary'), fontSize: 15 }}>
                       {post.content}
                     </div>
 
@@ -656,13 +670,13 @@ function Community() {
                     )}
 
                     {/* Post Actions */}
-                    <div style={{ display: 'flex', gap: 16, paddingTop: 16, borderTop: '1px solid #eee' }}>
+                    <div style={{ display: 'flex', gap: 16, paddingTop: 16, borderTop: `1px solid var(--border-color)` }}>
                       <button
                         onClick={() => handleLike(post.id)}
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: post.userLiked ? '#1976d2' : '#666',
+                          color: post.userLiked ? 'var(--accent-color)' : 'var(--text-secondary)',
                           cursor: 'pointer',
                           fontSize: 14,
                           padding: '8px 12px',
@@ -673,7 +687,7 @@ function Community() {
                           alignItems: 'center',
                           gap: 4
                         }}
-                        onMouseOver={e => e.target.style.background = '#e3f2fd'}
+                        onMouseOver={e => e.target.style.background = 'var(--bg-secondary)'}
                         onMouseOut={e => e.target.style.background = 'none'}
                       >
                         {post.userLiked ? '👍' : '👍'} Like ({post.likes})
@@ -684,7 +698,7 @@ function Community() {
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: post.userMarkedHelpful ? '#4caf50' : '#666',
+                          color: post.userMarkedHelpful ? '#4caf50' : 'var(--text-secondary)',
                           cursor: 'pointer',
                           fontSize: 14,
                           padding: '8px 12px',
@@ -695,7 +709,7 @@ function Community() {
                           alignItems: 'center',
                           gap: 4
                         }}
-                        onMouseOver={e => e.target.style.background = '#e8f5e8'}
+                        onMouseOver={e => e.target.style.background = 'var(--bg-secondary)'}
                         onMouseOut={e => e.target.style.background = 'none'}
                       >
                         ✓ Helpful ({post.helpful})
@@ -706,7 +720,7 @@ function Community() {
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: '#666',
+                          color: 'var(--text-secondary)',
                           cursor: 'pointer',
                           fontSize: 14,
                           padding: '8px 12px',
@@ -716,7 +730,7 @@ function Community() {
                           alignItems: 'center',
                           gap: 4
                         }}
-                        onMouseOver={e => e.target.style.background = '#f5f5f5'}
+                        onMouseOver={e => e.target.style.background = 'var(--bg-secondary)'}
                         onMouseOut={e => e.target.style.background = 'none'}
                       >
                         💬 Comments ({post.comments.length})
@@ -725,24 +739,25 @@ function Community() {
 
                     {/* Comments Section */}
                     {showComments[post.id] && (
-                      <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #eee' }}>
+                      <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid var(--border-color)` }}>
                         {/* Existing Comments */}
                         {post.comments.map(comment => (
                           <div key={comment.id} style={{ 
                             marginBottom: 12, 
                             padding: 12, 
-                            background: '#f8f9fa', 
-                            borderRadius: 8 
+                            background: 'var(--bg-secondary)', 
+                            borderRadius: 8,
+                            border: `1px solid var(--border-color)`
                           }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                              <span style={{ fontWeight: 600, fontSize: 14, color: '#333' }}>
+                              <span style={{ fontWeight: 600, fontSize: 14, ...getTextStyles('primary') }}>
                                 {comment.username}
                               </span>
-                              <span style={{ fontSize: 12, color: '#999' }}>
+                              <span style={{ fontSize: 12, ...getTextStyles('secondary') }}>
                                 {formatTimeAgo(comment.timestamp)}
                               </span>
                             </div>
-                            <div style={{ fontSize: 14, color: '#666', lineHeight: 1.4 }}>
+                            <div style={{ fontSize: 14, ...getTextStyles('secondary'), lineHeight: 1.4 }}>
                               {comment.content}
                             </div>
                           </div>
@@ -761,10 +776,12 @@ function Community() {
                             style={{
                               flex: 1,
                               padding: '10px 12px',
-                              border: '1px solid #ddd',
+                              border: `1px solid var(--border-color)`,
                               borderRadius: 8,
                               fontSize: 14,
-                              outline: 'none'
+                              outline: 'none',
+                              background: 'var(--bg-secondary)',
+                              color: 'var(--text-primary)'
                             }}
                             onKeyPress={e => {
                               if (e.key === 'Enter') {
@@ -776,7 +793,7 @@ function Community() {
                             onClick={() => handleComment(post.id)}
                             disabled={!newComment[post.id]?.trim()}
                             style={{
-                              background: newComment[post.id]?.trim() ? '#1976d2' : '#ccc',
+                              background: newComment[post.id]?.trim() ? 'var(--accent-color)' : 'var(--border-color)',
                               color: '#fff',
                               border: 'none',
                               padding: '10px 16px',
@@ -800,21 +817,18 @@ function Community() {
           {/* Sidebar - Post Creation */}
           <div style={{ position: 'sticky', top: 20, height: 'fit-content' }}>
             <section style={{ 
-              background: '#fff', 
-              padding: 24, 
-              borderRadius: 16,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-              border: '1px solid rgba(255,255,255,0.2)'
+              ...getCardStyles(),
+              padding: 24
             }}>
-              <h3 style={{ margin: '0 0 20px 0', color: '#333', fontSize: 18, fontWeight: 600 }}>
-                Create Post
+              <h3 style={{ margin: '0 0 20px 0', ...getTextStyles('primary'), fontSize: 18, fontWeight: 600 }}>
+                {getText('createPost')}
               </h3>
               
               <form onSubmit={handlePost}>
                 {/* Category Selection */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
-                    Category
+                  <label style={{ display: 'block', marginBottom: 8, ...getTextStyles('primary'), fontSize: 14, fontWeight: 500 }}>
+                    {getText('category')}
                   </label>
                   <select 
                     value={selectedCategory} 
@@ -823,10 +837,11 @@ function Community() {
                     style={{
                       width: '100%',
                       padding: '12px',
-                      border: '1px solid #ddd',
+                      border: `1px solid var(--border-color)`,
                       borderRadius: 8,
                       fontSize: 14,
-                      backgroundColor: isEmergency ? '#ffebee' : '#fff',
+                      backgroundColor: isEmergency ? '#ffebee' : 'var(--bg-secondary)',
+                      color: 'var(--text-primary)',
                       outline: 'none'
                     }}
                   >
@@ -840,33 +855,34 @@ function Community() {
 
                 {/* Post Content */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
-                    What's on your mind?
+                  <label style={{ display: 'block', marginBottom: 8, ...getTextStyles('primary'), fontSize: 14, fontWeight: 500 }}>
+                    {getText('whatsOnYourMind')}
                   </label>
                   <textarea
                     value={newPost}
                     onChange={e => setNewPost(e.target.value)}
-                    placeholder={isEmergency ? "Describe your emergency situation..." : "Share your thoughts, ask questions, or report accessibility updates..."}
+                    placeholder={isEmergency ? getText('describeEmergency') : getText('shareThoughts')}
                     required
                     style={{
                       width: '100%',
                       minHeight: 120,
                       padding: '12px',
-                      border: '1px solid #ddd',
+                      border: `1px solid var(--border-color)`,
                       borderRadius: 8,
                       fontSize: 16,
                       lineHeight: 1.5,
                       resize: 'vertical',
                       outline: 'none',
                       fontFamily: 'inherit',
-                      backgroundColor: isEmergency ? '#ffebee' : '#fff'
+                      backgroundColor: isEmergency ? '#ffebee' : 'var(--bg-secondary)',
+                      color: 'var(--text-primary)'
                     }}
                   />
                 </div>
 
                 {/* Location */}
                 <div style={{ marginBottom: 16, position: 'relative' }}>
-                  <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
+                  <label style={{ display: 'block', marginBottom: 8, ...getTextStyles('primary'), fontSize: 14, fontWeight: 500 }}>
                     Location (Optional)
                   </label>
                   <div style={{ display: 'flex', gap: 8 }}>
@@ -878,10 +894,12 @@ function Community() {
                       style={{
                         flex: 1,
                         padding: '12px',
-                        border: '1px solid #ddd',
+                        border: `1px solid var(--border-color)`,
                         borderRadius: 8,
                         fontSize: 14,
-                        outline: 'none'
+                        outline: 'none',
+                        background: 'var(--bg-secondary)',
+                        color: 'var(--text-primary)'
                       }}
                     />
                     <button
@@ -909,14 +927,14 @@ function Community() {
                       top: '100%',
                       left: 0,
                       right: 0,
-                      background: '#fff',
-                      border: '1px solid #ddd',
+                      background: 'var(--card-bg)',
+                      border: `1px solid var(--border-color)`,
                       borderTop: 'none',
                       borderRadius: '0 0 8px 8px',
                       maxHeight: 200,
                       overflowY: 'auto',
                       zIndex: 1000,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                      boxShadow: 'var(--shadow)'
                     }}>
                       {filteredPlaces.map((place, i) => (
                         <div
@@ -925,11 +943,12 @@ function Community() {
                           style={{
                             padding: '8px 12px',
                             cursor: 'pointer',
-                            borderBottom: i < filteredPlaces.length - 1 ? '1px solid #eee' : 'none',
-                            fontSize: 14
+                            borderBottom: i < filteredPlaces.length - 1 ? `1px solid var(--border-color)` : 'none',
+                            fontSize: 14,
+                            color: 'var(--text-primary)'
                           }}
-                          onMouseOver={e => e.target.style.background = '#f5f5f5'}
-                          onMouseOut={e => e.target.style.background = '#fff'}
+                          onMouseOver={e => e.target.style.background = 'var(--bg-secondary)'}
+                          onMouseOut={e => e.target.style.background = 'transparent'}
                         >
                           {place}
                         </div>
@@ -940,7 +959,7 @@ function Community() {
 
                 {/* Image Upload */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ display: 'block', marginBottom: 8, color: '#333', fontSize: 14, fontWeight: 500 }}>
+                  <label style={{ display: 'block', marginBottom: 8, ...getTextStyles('primary'), fontSize: 14, fontWeight: 500 }}>
                     Attach Image (Optional)
                   </label>
                   <input
@@ -951,9 +970,11 @@ function Community() {
                     style={{
                       width: '100%',
                       padding: '8px',
-                      border: '1px solid #ddd',
+                      border: `1px solid var(--border-color)`,
                       borderRadius: 8,
-                      fontSize: 14
+                      fontSize: 14,
+                      background: 'var(--bg-secondary)',
+                      color: 'var(--text-primary)'
                     }}
                   />
                   {attachedImage && (
@@ -963,7 +984,7 @@ function Community() {
                         alt="Preview"
                         style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }}
                       />
-                      <span style={{ fontSize: 12, color: '#666' }}>{attachedImage.name}</span>
+                      <span style={{ fontSize: 12, ...getTextStyles('secondary') }}>{attachedImage.name}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -993,7 +1014,7 @@ function Community() {
                         checked={shareLocation}
                         onChange={e => setShareLocation(e.target.checked)}
                       />
-                      <span style={{ fontSize: 14, color: '#666' }}>
+                      <span style={{ fontSize: 14, ...getTextStyles('secondary') }}>
                         Share location with post
                       </span>
                     </label>
@@ -1023,6 +1044,143 @@ function Community() {
                   {isEmergency ? <><FontAwesomeIcon icon={faExclamationTriangle} /> Post Emergency</> : <><FontAwesomeIcon icon={faEdit} /> Post Message</>}
                 </button>
               </form>
+            </section>
+
+            {/* Emergency Contacts Section */}
+            <section style={{ 
+              ...getCardStyles(),
+              padding: 24,
+              marginTop: 20
+            }}>
+              <h3 style={{ 
+                margin: '0 0 20px 0', 
+                color: '#f44336', 
+                fontSize: 18, 
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}>
+                <FontAwesomeIcon icon={faExclamationTriangle} />
+                Emergency Contacts
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Disability Services */}
+                <div style={{ 
+                  padding: 16, 
+                  border: `1px solid var(--border-color)`, 
+                  borderRadius: 12,
+                  background: 'var(--bg-secondary)'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#4caf50', fontSize: 14, fontWeight: 600 }}>
+                    Disability Services
+                  </h4>
+                  <div style={{ fontSize: 13, ...getTextStyles('secondary'), lineHeight: 1.4 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>National Helpline:</strong> <a href="tel:18001804444" style={{ color: 'var(--accent-color)' }}>1800-180-4444</a>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Tamil Nadu Disability Board:</strong> <a href="tel:04426433636" style={{ color: 'var(--accent-color)' }}>044-2643-3636</a>
+                    </div>
+                    <div>
+                      <strong>Accessibility Support:</strong> <a href="tel:18004251966" style={{ color: 'var(--accent-color)' }}>1800-425-1966</a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Metro Services */}
+                <div style={{ 
+                  padding: 16, 
+                  border: `1px solid var(--border-color)`, 
+                  borderRadius: 12,
+                  background: 'var(--bg-secondary)'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#2196f3', fontSize: 14, fontWeight: 600 }}>
+                    Chennai Metro
+                  </h4>
+                  <div style={{ fontSize: 13, ...getTextStyles('secondary'), lineHeight: 1.4 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Customer Care:</strong> <a href="tel:04428225500" style={{ color: 'var(--accent-color)' }}>044-2822-5500</a>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Emergency Helpline:</strong> <a href="tel:04442334455" style={{ color: 'var(--accent-color)' }}>044-4233-4455</a>
+                    </div>
+                    <div>
+                      <strong>Accessibility Help:</strong> <a href="tel:04428341234" style={{ color: 'var(--accent-color)' }}>044-2834-1234</a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MTC Bus Services */}
+                <div style={{ 
+                  padding: 16, 
+                  border: `1px solid var(--border-color)`, 
+                  borderRadius: 12,
+                  background: 'var(--bg-secondary)'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#ff9800', fontSize: 14, fontWeight: 600 }}>
+                    MTC Bus Service
+                  </h4>
+                  <div style={{ fontSize: 13, ...getTextStyles('secondary'), lineHeight: 1.4 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>MTC Helpline:</strong> <a href="tel:04424792600" style={{ color: 'var(--accent-color)' }}>044-2479-2600</a>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Route Enquiry:</strong> <a href="tel:04442321010" style={{ color: 'var(--accent-color)' }}>044-4232-1010</a>
+                    </div>
+                    <div>
+                      <strong>Lost & Found:</strong> <a href="tel:04428541234" style={{ color: 'var(--accent-color)' }}>044-2854-1234</a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Volunteer & Transit Staff */}
+                <div style={{ 
+                  padding: 16, 
+                  border: `1px solid var(--border-color)`, 
+                  borderRadius: 12,
+                  background: 'var(--bg-secondary)'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#9c27b0', fontSize: 14, fontWeight: 600 }}>
+                    Volunteer Support
+                  </h4>
+                  <div style={{ fontSize: 13, ...getTextStyles('secondary'), lineHeight: 1.4 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Transit Volunteers:</strong> <a href="tel:09876543210" style={{ color: 'var(--accent-color)' }}>+91 98765-43210</a>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Accessibility Guide:</strong> <a href="tel:09876543211" style={{ color: 'var(--accent-color)' }}>+91 98765-43211</a>
+                    </div>
+                    <div>
+                      <strong>Emergency Escort:</strong> <a href="tel:09876543212" style={{ color: 'var(--accent-color)' }}>+91 98765-43212</a>
+                    </div>
+                  </div>
+                </div>
+
+                {/* General Emergency */}
+                <div style={{ 
+                  padding: 16, 
+                  border: '2px solid #f44336', 
+                  borderRadius: 12,
+                  background: '#ffebee'
+                }}>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#f44336', fontSize: 14, fontWeight: 600 }}>
+                    General Emergency
+                  </h4>
+                  <div style={{ fontSize: 13, color: '#666', lineHeight: 1.4 }}>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Police:</strong> <a href="tel:100" style={{ color: '#1976d2', fontWeight: 600 }}>100</a>
+                    </div>
+                    <div style={{ marginBottom: 4 }}>
+                      <strong>Ambulance:</strong> <a href="tel:108" style={{ color: '#1976d2', fontWeight: 600 }}>108</a>
+                    </div>
+                    <div>
+                      <strong>Fire:</strong> <a href="tel:101" style={{ color: '#1976d2', fontWeight: 600 }}>101</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </section>
           </div>
         </div>

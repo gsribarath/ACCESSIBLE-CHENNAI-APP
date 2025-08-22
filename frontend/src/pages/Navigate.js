@@ -29,7 +29,7 @@ import { useVoiceInterface } from '../utils/voiceUtils';
 import '../styles/metro.css';
 
 const Navigate = () => {
-  const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles } = usePreferences();
+  const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
   const [user] = useState({ name: 'User' });
   const [transportMode, setTransportMode] = useState('general'); // 'general', 'metro', 'bus'
   const [fromLocation, setFromLocation] = useState('');
@@ -401,8 +401,8 @@ const Navigate = () => {
           width: '100%',
           height: '400px',
           borderRadius: '12px',
-          background: preferences.theme === 'dark' ? '#2d2d2d' : '#f8f9fa',
-          border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+          background: 'var(--bg-secondary)',
+          border: `1px solid var(--border-color)`,
           marginBottom: '16px',
           overflow: 'hidden'
         }}>
@@ -425,7 +425,7 @@ const Navigate = () => {
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
             <div style={{
-              background: isNavigating ? '#007bff' : '#ccc',
+              background: isNavigating ? '#007bff' : 'var(--bg-tertiary)',
               color: 'white',
               borderRadius: '50%',
               width: 40,
@@ -541,7 +541,7 @@ const Navigate = () => {
   // Search for routes
   const handleSearch = async () => {
     if (!fromLocation || !toLocation) {
-      setError('Please enter both from and to locations');
+      setError(getText('pleaseEnterBothLocations'));
       return;
     }
 
@@ -552,7 +552,7 @@ const Navigate = () => {
       const routeOptions = await LocationService.generateRouteOptions(fromLocation, toLocation);
       setRoutes(routeOptions);
     } catch (err) {
-      setError('Failed to find routes. Please try again.');
+      setError(getText('failedToFindRoutes'));
     } finally {
       setIsLoading(false);
     }
@@ -606,7 +606,7 @@ const Navigate = () => {
         height: '100vh',
         ...getThemeStyles()
       }}>
-        <span style={getTextStyles('primary')}>Loading...</span>
+        <span style={getTextStyles('primary')}>{getText('loading')}</span>
       </div>
     );
   }
@@ -623,30 +623,7 @@ const Navigate = () => {
 
   return (
     <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
-      <Navigation user={user} onLogout={handleLogout} />
-
-      {/* Data Restoration Notification */}
-      {dataRestored && (
-        <div style={{
-          position: 'fixed',
-          top: '80px',
-          left: '20px',
-          background: '#28a745',
-          color: 'white',
-          padding: '12px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(40, 167, 69, 0.3)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          fontSize: '14px',
-          fontWeight: '600'
-        }}>
-          <FontAwesomeIcon icon={faCrosshairs} />
-          Previous navigation data restored
-        </div>
-      )}
+      <Navigation user={user} />
 
       {/* Voice Mode Indicator */}
       {isVoiceMode && (
@@ -697,7 +674,7 @@ const Navigate = () => {
             letterSpacing: 'var(--letter-spacing-tight)',
             color: 'white'
           }}>
-            <FontAwesomeIcon icon={faCompass} /> Navigate Chennai
+            <FontAwesomeIcon icon={faCompass} /> {getText('navigate')} {getText('chennai')}
           </h1>
           <p style={{ 
             margin: 0, 
@@ -707,7 +684,7 @@ const Navigate = () => {
             opacity: 0.9,
             color: 'white'
           }}>
-            Find accessible routes with real-time navigation
+            {getText('discoverAccessibleRoutes')}
           </p>
         </section>
 
@@ -721,7 +698,7 @@ const Navigate = () => {
         }}>
           <div style={{
             display: 'flex',
-            backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#f8f9fa',
+            backgroundColor: 'var(--bg-secondary)',
             borderRadius: '16px 16px 0 0'
           }}>
             <button
@@ -731,11 +708,11 @@ const Navigate = () => {
                 padding: '16px 20px',
                 border: 'none',
                 background: transportMode === 'general' 
-                  ? (preferences.theme === 'dark' ? '#404040' : '#ffffff')
+                  ? 'var(--card-bg)'
                   : 'transparent',
                 color: transportMode === 'general'
-                  ? (preferences.theme === 'dark' ? '#ffffff' : '#2c3e50')
-                  : (preferences.theme === 'dark' ? '#888' : '#666'),
+                  ? 'var(--text-primary)'
+                  : 'var(--text-secondary)',
                 fontWeight: transportMode === 'general' ? '600' : '400',
                 fontSize: '14px',
                 cursor: 'pointer',
@@ -748,7 +725,7 @@ const Navigate = () => {
               }}
             >
               <FontAwesomeIcon icon={faCar} />
-              General Routes
+              {getText('route')} {getText('general')}
             </button>
             
             <button
@@ -758,11 +735,11 @@ const Navigate = () => {
                 padding: '16px 20px',
                 border: 'none',
                 background: transportMode === 'metro' 
-                  ? (preferences.theme === 'dark' ? '#404040' : '#ffffff')
+                  ? 'var(--card-bg)'
                   : 'transparent',
                 color: transportMode === 'metro'
-                  ? (preferences.theme === 'dark' ? '#ffffff' : '#2c3e50')
-                  : (preferences.theme === 'dark' ? '#888' : '#666'),
+                  ? 'var(--text-primary)'
+                  : 'var(--text-secondary)',
                 fontWeight: transportMode === 'metro' ? '600' : '400',
                 fontSize: '14px',
                 cursor: 'pointer',
@@ -774,7 +751,7 @@ const Navigate = () => {
               }}
             >
               <FontAwesomeIcon icon={faTrain} />
-              Chennai Metro
+              {getText('chennaiMetro')}
             </button>
             
             <button
@@ -784,11 +761,11 @@ const Navigate = () => {
                 padding: '16px 20px',
                 border: 'none',
                 background: transportMode === 'bus' 
-                  ? (preferences.theme === 'dark' ? '#404040' : '#ffffff')
+                  ? 'var(--card-bg)'
                   : 'transparent',
                 color: transportMode === 'bus'
-                  ? (preferences.theme === 'dark' ? '#ffffff' : '#2c3e50')
-                  : (preferences.theme === 'dark' ? '#888' : '#666'),
+                  ? 'var(--text-primary)'
+                  : 'var(--text-secondary)',
                 fontWeight: transportMode === 'bus' ? '600' : '400',
                 fontSize: '14px',
                 cursor: 'pointer',
@@ -801,7 +778,7 @@ const Navigate = () => {
               }}
             >
               <FontAwesomeIcon icon={faBus} />
-              Bus Routes
+              {getText('buses')} {getText('route')}
             </button>
           </div>
         </section>
@@ -827,7 +804,7 @@ const Navigate = () => {
             fontWeight: 600,
             ...getTextStyles('primary')
           }}>
-            Plan Your Route
+            {getText('findRoute')}
           </h2>
           
           <div style={{ 
@@ -846,7 +823,7 @@ const Navigate = () => {
                 letterSpacing: 'var(--letter-spacing-wide)',
                 ...getTextStyles('primary')
               }}>
-                From
+                {getText('from')}
               </label>
               <div style={{ position: 'relative', width: '100%' }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -871,17 +848,17 @@ const Navigate = () => {
                       e.stopPropagation();
                       setActiveInput('from');
                     }}
-                    placeholder="Enter starting location"
+                    placeholder={getText('enterStartingLocation')}
                     className="modern-input"
                     style={{
                       flex: 1,
                       boxSizing: 'border-box',
                       padding: '12px',
-                      border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+                      border: `1px solid var(--border-color)`,
                       borderRadius: '8px',
                       fontSize: '14px',
-                      backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                      color: preferences.theme === 'dark' ? '#ffffff' : '#000000',
+                      backgroundColor: 'var(--input-bg)',
+                      color: 'var(--text-primary)',
                       fontFamily: 'var(--font-ui)',
                       transition: 'border-color 0.2s ease'
                     }}
@@ -931,8 +908,8 @@ const Navigate = () => {
                       top: 'calc(100% + 4px)',
                       left: 0,
                       right: 0,
-                      backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                      border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+                      backgroundColor: 'var(--card-bg)',
+                      border: `1px solid var(--border-color)`,
                       borderRadius: '8px',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
                       zIndex: 9999,
@@ -941,6 +918,45 @@ const Navigate = () => {
                       marginTop: '2px'
                     }}
                   >
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '8px 16px',
+                      borderBottom: `1px solid var(--border-color)`,
+                      backgroundColor: 'var(--bg-tertiary)',
+                      borderRadius: '8px 8px 0 0'
+                    }}>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '600',
+                        color: 'var(--text-primary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        Location Suggestions
+                      </span>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSuggestions(prev => ({ ...prev, from: [] }));
+                          setActiveInput(null);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
                     {suggestions.from.map((suggestion, index) => (
                       <div
                         key={index}
@@ -951,7 +967,7 @@ const Navigate = () => {
                           setActiveInput(null);
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f0f0f0';
+                          e.target.style.backgroundColor = 'var(--bg-hover)';
                         }}
                         onMouseLeave={(e) => {
                           e.target.style.backgroundColor = 'transparent';
@@ -960,9 +976,9 @@ const Navigate = () => {
                           padding: '14px 16px',
                           cursor: 'pointer',
                           borderBottom: index < suggestions.from.length - 1 
-                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e8e8e8'}` 
+                            ? `1px solid var(--border-color)` 
                             : 'none',
-                          color: preferences.theme === 'dark' ? '#ffffff' : '#333333',
+                          color: 'var(--text-primary)',
                           backgroundColor: 'transparent',
                           fontSize: '14px',
                           fontFamily: 'var(--font-ui)',
@@ -998,7 +1014,7 @@ const Navigate = () => {
                 letterSpacing: 'var(--letter-spacing-wide)',
                 ...getTextStyles('primary')
               }}>
-                To
+                {getText('to')}
               </label>
               <div style={{ position: 'relative', width: '100%' }}>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1023,17 +1039,17 @@ const Navigate = () => {
                     e.stopPropagation();
                     setActiveInput('to');
                   }}
-                  placeholder="Enter destination"
+                  placeholder={getText('enterDestination')}
                   className="modern-input"
                   style={{
                     flex: 1,
                     boxSizing: 'border-box',
                     padding: '12px',
-                    border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+                    border: `1px solid var(--border-color)`,
                     borderRadius: '8px',
                     fontSize: '14px',
-                    backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                    color: preferences.theme === 'dark' ? '#ffffff' : '#000000',
+                    backgroundColor: 'var(--input-bg)',
+                    color: 'var(--text-primary)',
                     fontFamily: 'var(--font-ui)',
                     transition: 'border-color 0.2s ease'
                   }}
@@ -1083,8 +1099,8 @@ const Navigate = () => {
                       top: 'calc(100% + 4px)',
                       left: 0,
                       right: 0,
-                      backgroundColor: preferences.theme === 'dark' ? '#2d2d2d' : '#ffffff',
-                      border: `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+                      backgroundColor: 'var(--card-bg)',
+                      border: `1px solid var(--border-color)`,
                       borderRadius: '8px',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
                       zIndex: 9999,
@@ -1093,6 +1109,45 @@ const Navigate = () => {
                       marginTop: '2px'
                     }}
                   >
+                    <div style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      padding: '8px 16px',
+                      borderBottom: `1px solid var(--border-color)`,
+                      backgroundColor: 'var(--bg-tertiary)',
+                      borderRadius: '8px 8px 0 0'
+                    }}>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        fontWeight: '600',
+                        color: 'var(--text-primary)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        Location Suggestions
+                      </span>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSuggestions(prev => ({ ...prev, to: [] }));
+                          setActiveInput(null);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-primary)',
+                          cursor: 'pointer',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
                     {suggestions.to.map((suggestion, index) => (
                       <div
                         key={index}
@@ -1103,7 +1158,7 @@ const Navigate = () => {
                           setActiveInput(null);
                         }}
                         onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = preferences.theme === 'dark' ? '#404040' : '#f0f0f0';
+                          e.target.style.backgroundColor = 'var(--bg-hover)';
                         }}
                         onMouseLeave={(e) => {
                           e.target.style.backgroundColor = 'transparent';
@@ -1112,9 +1167,9 @@ const Navigate = () => {
                           padding: '14px 16px',
                           cursor: 'pointer',
                           borderBottom: index < suggestions.to.length - 1 
-                            ? `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e8e8e8'}` 
+                            ? `1px solid var(--border-color)` 
                             : 'none',
-                          color: preferences.theme === 'dark' ? '#ffffff' : '#333333',
+                          color: 'var(--text-primary)',
                           backgroundColor: 'transparent',
                           fontSize: '14px',
                           fontFamily: 'var(--font-ui)',
@@ -1172,7 +1227,7 @@ const Navigate = () => {
                 cursor: (isLoading || !fromLocation || !toLocation) ? 'not-allowed' : 'pointer'
               }}
             >
-              {isLoading ? 'Searching...' : <><FontAwesomeIcon icon={faSearch} /> Find Routes</>}
+              {isLoading ? getText('searching') : <><FontAwesomeIcon icon={faSearch} /> {getText('findRoutes')}</>}
             </button>
             
             <button
@@ -1193,7 +1248,7 @@ const Navigate = () => {
               }}
             >
               <FontAwesomeIcon icon={faCrosshairs} />
-              Clear
+              {getText('delete')}
             </button>
           </div>
         </section>
@@ -1212,7 +1267,7 @@ const Navigate = () => {
               fontWeight: 600,
               ...getTextStyles('primary')
             }}>
-              Route Options
+              {getText('availableRoutes')}
             </h2>
             
             <div style={{ display: 'grid', gap: 16 }}>
@@ -1222,7 +1277,7 @@ const Navigate = () => {
                   padding: 20,
                   border: selectedRoute === route 
                     ? '2px solid #007bff' 
-                    : `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`,
+                    : `1px solid var(--border-color)`,
                   transition: 'all 0.3s ease',
                   position: 'relative'
                 }}
@@ -1234,7 +1289,7 @@ const Navigate = () => {
                 }}
                 onMouseLeave={(e) => {
                   if (selectedRoute !== route) {
-                    e.target.style.border = `1px solid ${preferences.theme === 'dark' ? '#404040' : '#e0e0e0'}`;
+                    e.target.style.border = `1px solid var(--border-color)`;
                     e.target.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.1)';
                   }
                 }}
@@ -1282,15 +1337,15 @@ const Navigate = () => {
                         
                         <div style={{ display: 'flex', gap: 24, marginBottom: 12 }}>
                           <div>
-                            <span style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Duration</span>
+                            <span style={{ fontSize: 12, ...getTextStyles('secondary'), textTransform: 'uppercase', letterSpacing: '0.5px' }}>Duration</span>
                             <div style={{ fontSize: 16, fontWeight: 600, ...getTextStyles('primary') }}>{route.duration}</div>
                           </div>
                           <div>
-                            <span style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Distance</span>
+                            <span style={{ fontSize: 12, ...getTextStyles('secondary'), textTransform: 'uppercase', letterSpacing: '0.5px' }}>Distance</span>
                             <div style={{ fontSize: 16, fontWeight: 600, ...getTextStyles('primary') }}>{route.distance}</div>
                           </div>
                           <div>
-                            <span style={{ fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cost</span>
+                            <span style={{ fontSize: 12, ...getTextStyles('secondary'), textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cost</span>
                             <div style={{ fontSize: 16, fontWeight: 600, color: '#22c55e' }}>{route.cost}</div>
                           </div>
                         </div>
@@ -1317,7 +1372,7 @@ const Navigate = () => {
                         </div>
                         
                         {route.realTimeInfo && (
-                          <div style={{ fontSize: 11, color: '#666', textAlign: 'right' }}>
+                          <div style={{ fontSize: 11, ...getTextStyles('secondary'), textAlign: 'right' }}>
                             <div>Next: {route.realTimeInfo.nextMetroArrival || route.realTimeInfo.nextBusArrival}</div>
                             {route.realTimeInfo.currentDelay && route.realTimeInfo.currentDelay !== 'On time' && (
                               <div style={{ color: '#f59e0b' }}>Delay: {route.realTimeInfo.currentDelay}</div>
@@ -1330,11 +1385,11 @@ const Navigate = () => {
                     {/* Real-time Information Panel */}
                     {route.realTimeInfo && (
                       <div style={{
-                        background: preferences.theme === 'dark' ? '#1f2937' : '#f8fafc',
+                        background: 'var(--bg-tertiary)',
                         padding: 12,
                         borderRadius: 8,
                         marginBottom: 16,
-                        border: `1px solid ${preferences.theme === 'dark' ? '#374151' : '#e2e8f0'}`
+                        border: `1px solid var(--border-color)`
                       }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                           <span style={{ fontSize: 12, fontWeight: 600, ...getTextStyles('primary') }}>LIVE UPDATES</span>
@@ -1352,18 +1407,18 @@ const Navigate = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, fontSize: 11 }}>
                           {route.realTimeInfo.nextMetroArrival && (
                             <div>
-                              <span style={{ color: '#666' }}>Next Metro:</span>
+                              <span style={{ ...getTextStyles('secondary') }}>Next Metro:</span>
                               <div style={{ fontWeight: 600, ...getTextStyles('primary') }}>{route.realTimeInfo.nextMetroArrival}</div>
                             </div>
                           )}
                           {route.realTimeInfo.nextBusArrival && (
                             <div>
-                              <span style={{ color: '#666' }}>Next Bus:</span>
+                              <span style={{ ...getTextStyles('secondary') }}>Next Bus:</span>
                               <div style={{ fontWeight: 600, ...getTextStyles('primary') }}>{route.realTimeInfo.nextBusArrival}</div>
                             </div>
                           )}
                           <div>
-                            <span style={{ color: '#666' }}>Crowd Level:</span>
+                            <span style={{ ...getTextStyles('secondary') }}>Crowd Level:</span>
                             <div style={{ 
                               fontWeight: 600, 
                               color: route.realTimeInfo.crowdLevel === 'High' ? '#ef4444' :
@@ -1374,7 +1429,7 @@ const Navigate = () => {
                           </div>
                           {route.realTimeInfo.alternativeBuses && (
                             <div>
-                              <span style={{ color: '#666' }}>Alternatives:</span>
+                              <span style={{ ...getTextStyles('secondary') }}>Alternatives:</span>
                               <div style={{ fontWeight: 600, fontSize: 10, ...getTextStyles('primary') }}>
                                 {route.realTimeInfo.alternativeBuses.slice(0, 2).join(', ')}
                               </div>
@@ -1387,7 +1442,7 @@ const Navigate = () => {
                     {/* Route Steps Preview */}
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                        <FontAwesomeIcon icon={faRoute} style={{ color: '#666', fontSize: 14 }} />
+                        <FontAwesomeIcon icon={faRoute} style={{ ...getTextStyles('secondary'), fontSize: 14 }} />
                         <span style={{ fontSize: 14, fontWeight: 600, ...getTextStyles('primary') }}>Route Details</span>
                       </div>
                       
@@ -1398,7 +1453,7 @@ const Navigate = () => {
                             alignItems: 'center',
                             gap: 12,
                             padding: '8px 0',
-                            borderBottom: stepIndex < 2 ? `1px solid ${preferences.theme === 'dark' ? '#374151' : '#e5e7eb'}` : 'none'
+                            borderBottom: stepIndex < 2 ? `1px solid var(--border-color)` : 'none'
                           }}>
                             <div style={{
                               width: 24,
@@ -1421,7 +1476,7 @@ const Navigate = () => {
                         {route.steps && route.steps.length > 3 && (
                           <div style={{ 
                             fontSize: 12, 
-                            color: '#666', 
+                            ...getTextStyles('secondary'), 
                             fontStyle: 'italic',
                             paddingLeft: 36
                           }}>
@@ -1434,7 +1489,7 @@ const Navigate = () => {
                     {/* Accessibility Features */}
                     {route.accessibilityFeatures && route.accessibilityFeatures.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: '#666', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, ...getTextStyles('secondary'), marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           Accessibility Features
                         </div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1473,9 +1528,9 @@ const Navigate = () => {
                       alignItems: 'center',
                       marginTop: 16,
                       paddingTop: 16,
-                      borderTop: `1px solid ${preferences.theme === 'dark' ? '#374151' : '#e5e7eb'}`
+                      borderTop: `1px solid var(--border-color)`
                     }}>
-                      <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#666' }}>
+                      <div style={{ display: 'flex', gap: 16, fontSize: 12, ...getTextStyles('secondary') }}>
                         <span>Carbon: {route.carbonFootprint}</span>
                         <span>•</span>
                         <span>{route.steps?.length || 0} steps</span>

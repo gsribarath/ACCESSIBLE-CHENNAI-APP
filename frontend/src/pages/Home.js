@@ -242,7 +242,7 @@ function Home() {
   // Main home page for logged-in users
   return (
     <div style={{ ...getThemeStyles(), paddingBottom: 80, position: 'relative' }}>
-      <Navigation user={user} onLogout={handleLogout} />
+      <Navigation user={user} />
 
       {/* Voice Mode Indicator */}
       {isVoiceMode && (

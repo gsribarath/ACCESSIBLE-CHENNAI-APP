@@ -256,7 +256,7 @@ function Alerts() {
 
   return (
     <div style={{ ...getThemeStyles(), paddingBottom: 80 }}>
-      <Navigation user={user} onLogout={handleLogout} />
+      <Navigation user={user} />
 
       <main style={{ padding: '20px', maxWidth: 1200, margin: '0 auto' }}>
         {/* Header */}
@@ -309,9 +309,9 @@ function Alerts() {
               <span style={{ fontSize: 16, color: '#fff', fontWeight: 'bold' }}>M</span>
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>Chennai Metro Live</h2>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>{getText('chennaiMetroLive')}</h2>
               <p style={{ margin: 0, fontSize: 14, opacity: 0.9 }}>
-                Last updated: {new Date().toLocaleTimeString()}
+                {getText('lastUpdated')}: {new Date().toLocaleTimeString()}
               </p>
             </div>
             <div style={{
@@ -322,14 +322,14 @@ function Alerts() {
               fontSize: 12,
               fontWeight: 600
             }}>
-              LIVE
+              {getText('live')}
             </div>
           </div>
 
           {metroAlerts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 20, opacity: 0.8 }}>
               <FontAwesomeIcon icon={faCheckCircle} style={{ fontSize: 32, marginBottom: 8, display: 'block', color: '#4caf50' }} />
-              <p>All metro services running normally</p>
+              <p>{getText('allServicesNormal')}</p>
             </div>
           ) : (
             <div style={{ display: 'grid', gap: 12 }}>
@@ -411,7 +411,12 @@ function Alerts() {
           </h3>
           
           <form onSubmit={handlePost}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+              gap: 20, 
+              marginBottom: 20 
+            }}>
               <div>
                 <label style={{ 
                   display: 'block', 
@@ -434,7 +439,8 @@ function Alerts() {
                     transition: 'all 0.2s',
                     outline: 'none',
                     background: 'var(--card-bg)',
-                    color: 'var(--text-primary)'
+                    color: 'var(--text-primary)',
+                    boxSizing: 'border-box'
                   }}
                 >
                   <option value="transport">{getText('transport')}</option>
@@ -469,7 +475,8 @@ function Alerts() {
                     transition: 'all 0.2s',
                     outline: 'none',
                     background: 'var(--card-bg)',
-                    color: 'var(--text-primary)'
+                    color: 'var(--text-primary)',
+                    boxSizing: 'border-box'
                   }}
                   onFocus={e => {
                     e.target.style.borderColor = 'var(--accent-color)';
@@ -540,23 +547,20 @@ function Alerts() {
 
         {/* Community Alerts */}
         <section style={{ 
-          background: '#fff', 
-          padding: 24, 
-          borderRadius: 16,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          border: '1px solid rgba(255,255,255,0.2)'
+          ...getCardStyles(),
+          padding: 24
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <h3 style={{ margin: 0, color: '#333', fontSize: 18, fontWeight: 600 }}>
-              Community Reports
+            <h3 style={{ margin: 0, ...getTextStyles('primary'), fontSize: 18, fontWeight: 600 }}>
+              {getText('communityReports')}
             </h3>
             <button 
               onClick={fetchAlerts}
               disabled={loading}
               style={{
                 background: 'none',
-                border: '1px solid #1976d2',
-                color: '#1976d2',
+                border: `1px solid var(--accent-color)`,
+                color: 'var(--accent-color)',
                 borderRadius: 8,
                 padding: '8px 16px',
                 fontSize: 12,
@@ -566,14 +570,14 @@ function Alerts() {
               }}
               onMouseOver={e => {
                 if (!loading) {
-                  e.target.style.background = '#1976d2';
+                  e.target.style.background = 'var(--accent-color)';
                   e.target.style.color = '#fff';
                 }
               }}
               onMouseOut={e => {
                 if (!loading) {
                   e.target.style.background = 'none';
-                  e.target.style.color = '#1976d2';
+                  e.target.style.color = 'var(--accent-color)';
                 }
               }}
             >
@@ -585,16 +589,16 @@ function Alerts() {
               ) : (
                 <>
                   <FontAwesomeIcon icon={faRefresh} style={{ marginRight: 8 }} />
-                  Refresh
+                  {getText('refresh')}
                 </>
               )}
             </button>
           </div>
           
           {alerts.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
+            <div style={{ textAlign: 'center', padding: 40, ...getTextStyles('secondary') }}>
               <FontAwesomeIcon icon={faExclamationTriangle} style={{ fontSize: 32, marginBottom: 16, opacity: 0.5, display: 'block' }} />
-              <p>No community alerts yet. Be the first to report an issue!</p>
+              <p>{getText('noAlertsYet')}</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -603,25 +607,25 @@ function Alerts() {
                   key={alert.id}
                   style={{
                     padding: 16,
-                    background: '#f8f9fa',
+                    background: 'var(--bg-secondary)',
                     borderRadius: 12,
-                    border: '2px solid #e0e0e0',
+                    border: `2px solid var(--border-color)`,
                     transition: 'all 0.2s'
                   }}
                   onMouseOver={e => {
-                    e.currentTarget.style.borderColor = '#1976d2';
-                    e.currentTarget.style.background = '#e3f2fd';
+                    e.currentTarget.style.borderColor = 'var(--accent-color)';
+                    e.currentTarget.style.background = preferences.theme === 'dark' ? '#2a3f5f' : preferences.theme === 'high-contrast' ? '#333333' : '#e3f2fd';
                   }}
                   onMouseOut={e => {
-                    e.currentTarget.style.borderColor = '#e0e0e0';
-                    e.currentTarget.style.background = '#f8f9fa';
+                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                    e.currentTarget.style.background = 'var(--bg-secondary)';
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                     <span style={{ 
                       fontSize: 18, 
                       flexShrink: 0, 
-                      color: '#1976d2',
+                      color: 'var(--accent-color)',
                       fontWeight: 'bold'
                     }}>
                       {alert.category[0].toUpperCase()}
@@ -629,7 +633,7 @@ function Alerts() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         <span style={{
-                          background: '#1976d2',
+                          background: 'var(--accent-color)',
                           color: '#fff',
                           padding: '4px 12px',
                           borderRadius: 20,
@@ -639,20 +643,20 @@ function Alerts() {
                         }}>
                           {alert.category}
                         </span>
-                        <span style={{ fontSize: 12, color: '#666', fontWeight: 500 }}>
+                        <span style={{ fontSize: 12, ...getTextStyles('secondary'), fontWeight: 500 }}>
                           {new Date(alert.created_at).toLocaleString()}
                         </span>
                       </div>
                       <p style={{ 
                         margin: 0, 
-                        color: '#333', 
+                        ...getTextStyles('primary'), 
                         fontSize: 15, 
                         lineHeight: 1.5 
                       }}>
                         {alert.message}
                       </p>
                       {alert.location && (
-                        <div style={{ marginTop: 8, fontSize: 12, color: '#666' }}>
+                        <div style={{ marginTop: 8, fontSize: 12, ...getTextStyles('secondary') }}>
                           Location: {alert.location}
                         </div>
                       )}

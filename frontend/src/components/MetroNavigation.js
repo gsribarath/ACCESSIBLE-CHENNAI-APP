@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import MetroService from '../services/MetroService';
+import { usePreferences } from '../context/PreferencesContext';
 
 const MetroNavigation = () => {
+  const { getCardStyles, getTextStyles } = usePreferences();
   const [fromStation, setFromStation] = useState('');
   const [toStation, setToStation] = useState('');
   const [searchResults, setSearchResults] = useState({ from: [], to: [] });
@@ -370,7 +372,7 @@ const MetroNavigation = () => {
       {/* Metro Schedule Display */}
       {showSchedule && (
         <div className="metro-schedule-container" style={{
-          background: '#f8f9fa',
+          ...getCardStyles(),
           border: '2px solid #007bff',
           borderRadius: '16px',
           padding: '24px',
@@ -398,10 +400,10 @@ const MetroNavigation = () => {
           {Object.entries(getCurrentSchedule()).map(([corridorKey, corridor]) => (
             <div key={corridorKey} className="corridor-schedule" style={{
               marginBottom: '32px',
-              border: '1px solid #dee2e6',
+              border: `1px solid var(--border-color)`,
               borderRadius: '12px',
               overflow: 'hidden',
-              background: 'white'
+              background: 'var(--bg-secondary)'
             }}>
               <div className="corridor-header" style={{
                 background: corridorKey.includes('blue') ? '#007bff' : 
@@ -431,17 +433,17 @@ const MetroNavigation = () => {
               <div className="schedule-table">
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ background: '#f8f9fa' }}>
-                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                    <tr style={{ background: 'var(--bg-tertiary)' }}>
+                      <th style={{ padding: '12px', border: `1px solid var(--border-color)`, fontWeight: '600', fontSize: '14px', ...getTextStyles('primary') }}>
                         Departure Time of First train
                       </th>
-                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                      <th style={{ padding: '12px', border: `1px solid var(--border-color)`, fontWeight: '600', fontSize: '14px', ...getTextStyles('primary') }}>
                         Departure Time of Last train
                       </th>
-                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                      <th style={{ padding: '12px', border: `1px solid var(--border-color)`, fontWeight: '600', fontSize: '14px', ...getTextStyles('primary') }}>
                         Non peak hour Frequency
                       </th>
-                      <th style={{ padding: '12px', border: '1px solid #dee2e6', fontWeight: '600', fontSize: '14px' }}>
+                      <th style={{ padding: '12px', border: `1px solid var(--border-color)`, fontWeight: '600', fontSize: '14px', ...getTextStyles('primary') }}>
                         Peak hour Frequency
                       </th>
                     </tr>
@@ -449,13 +451,13 @@ const MetroNavigation = () => {
                   <tbody>
                     {corridor.schedule.map((schedule, index) => (
                       <tr key={index}>
-                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                        <td style={{ padding: '12px', border: `1px solid var(--border-color)`, fontSize: '13px', ...getTextStyles('primary') }}>
                           <strong>{schedule.direction}:</strong> {schedule.firstTrain}
                         </td>
-                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                        <td style={{ padding: '12px', border: `1px solid var(--border-color)`, fontSize: '13px', ...getTextStyles('primary') }}>
                           <strong>{schedule.direction}:</strong> {schedule.lastTrain}
                         </td>
-                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                        <td style={{ padding: '12px', border: `1px solid var(--border-color)`, fontSize: '13px', ...getTextStyles('primary') }}>
                           {schedule.nonPeakFrequency}
                           {schedule.extendedNonPeak && (
                             <div style={{ color: '#dc3545', fontWeight: '600', marginTop: '4px' }}>
@@ -463,7 +465,7 @@ const MetroNavigation = () => {
                             </div>
                           )}
                         </td>
-                        <td style={{ padding: '12px', border: '1px solid #dee2e6', fontSize: '13px' }}>
+                        <td style={{ padding: '12px', border: `1px solid var(--border-color)`, fontSize: '13px', ...getTextStyles('primary') }}>
                           {schedule.peakFrequency}
                           {schedule.specialNote && (
                             <div style={{ color: '#28a745', fontSize: '12px', marginTop: '4px' }}>
@@ -480,12 +482,13 @@ const MetroNavigation = () => {
           ))}
 
           <div className="schedule-notes" style={{
-            background: '#fff3cd',
-            border: '1px solid #ffeaa7',
+            background: 'var(--bg-tertiary)',
+            border: `1px solid var(--border-color)`,
             borderRadius: '8px',
             padding: '16px',
             fontSize: '13px',
-            lineHeight: '1.5'
+            lineHeight: '1.5',
+            ...getTextStyles('primary')
           }}>
             <strong>NOTE:</strong>
             <br />
@@ -514,8 +517,28 @@ const MetroNavigation = () => {
             />
             {searchResults.from.length > 0 && showDropdown.from && (
               <div className="search-dropdown">
-                <div className="dropdown-header">
+                <div className="dropdown-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Select Departure Station ({searchResults.from.length} stations)</span>
+                  <button 
+                    onClick={() => {
+                      setShowDropdown(prev => ({ ...prev, from: false }));
+                      setSearchResults(prev => ({ ...prev, from: [] }));
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      color: '#666',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Close dropdown"
+                  >
+                    ✕
+                  </button>
                 </div>
                 {(() => {
                   const blueStations = searchResults.from.filter(s => s.line === 'Blue');
@@ -625,8 +648,28 @@ const MetroNavigation = () => {
             />
             {searchResults.to.length > 0 && showDropdown.to && (
               <div className="search-dropdown">
-                <div className="dropdown-header">
+                <div className="dropdown-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>Select Destination Station ({searchResults.to.length} stations)</span>
+                  <button 
+                    onClick={() => {
+                      setShowDropdown(prev => ({ ...prev, to: false }));
+                      setSearchResults(prev => ({ ...prev, to: [] }));
+                    }}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      padding: '4px',
+                      color: '#666',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Close dropdown"
+                  >
+                    ✕
+                  </button>
                 </div>
                 {(() => {
                   const blueStations = searchResults.to.filter(s => s.line === 'Blue');

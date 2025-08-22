@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, redirect, url_for, session
+from flask import Flask, request, jsonify, redirect, url_for, session, send_from_directory, send_file
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin
@@ -61,7 +61,15 @@ class Route(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 def create_app():
-    app = Flask(__name__)
+    # Check if we're in production and static files exist
+    static_folder = None
+    template_folder = None
+    
+    if os.path.exists('static'):
+        static_folder = 'static'
+        template_folder = 'static'
+    
+    app = Flask(__name__, static_folder=static_folder, template_folder=template_folder)
     # Use SQLite for development - simpler setup
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///accessible_chennai.db'
     app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev')
@@ -329,6 +337,19 @@ def create_app():
 
     @app.route('/')
     def index():
+        # Serve React app in production
+        if os.path.exists('static/index.html'):
+            return send_file('static/index.html')
+        return {'message': 'Accessible Chennai API running'}
+    
+    # Serve React static files
+    @app.route('/<path:path>')
+    def serve_static(path):
+        if os.path.exists(f'static/{path}'):
+            return send_from_directory('static', path)
+        # For React routing, serve index.html for non-API routes
+        if not path.startswith('api/') and os.path.exists('static/index.html'):
+            return send_file('static/index.html')
         return {'message': 'Accessible Chennai API running'}
 
     return app
