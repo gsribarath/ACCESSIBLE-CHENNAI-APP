@@ -4,16 +4,20 @@ import { usePreferences } from '../context/PreferencesContext';
 
 const ModeSelection = () => {
   const { preferences, updatePreferences, getText } = usePreferences();
-  const [selectedMode, setSelectedMode] = useState(preferences.mode || 'normal');
+  const [selectedMode, setSelectedMode] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [spokenText, setSpokenText] = useState(''); // Real-time spoken text display
   const [isSaving, setIsSaving] = useState(false);
+  const [hasSpoken, setHasSpoken] = useState(false); // Track if welcome message was spoken
+  const [isProcessing, setIsProcessing] = useState(false); // Prevent multiple processing
   const recognitionRef = useRef(null);
   const speakTimeoutRef = useRef(null);
+  const hasRedirectedRef = useRef(false); // Prevent multiple redirects
   const navigate = useNavigate();
 
-  // Speech synthesis setup
-  const speak = useCallback((text) => {
+  // Speech synthesis setup - with callback when speech ends
+  const speak = useCallback((text, onEnd = null) => {
     if ('speechSynthesis' in window) {
       // Clear any previous timeout
       if (speakTimeoutRef.current) {
@@ -24,18 +28,52 @@ const ModeSelection = () => {
       window.speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = preferences.language === 'ta' ? 'ta-IN' : 'en-US';
-      utterance.rate = 1.0;
+      utterance.lang = preferences.language === 'ta' ? 'ta-IN' : 'en-IN';
+      utterance.rate = 0.95;
       utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      
+      utterance.onend = () => {
+        if (onEnd) onEnd();
+      };
       
       window.speechSynthesis.speak(utterance);
       
       // Set timeout to clear the speech instance after it finishes
       speakTimeoutRef.current = setTimeout(() => {
         window.speechSynthesis.cancel();
-      }, 10000); // 10 seconds max for any speech
+        if (onEnd) onEnd();
+      }, 15000); // 15 seconds max for any speech
+    } else if (onEnd) {
+      onEnd();
     }
   }, [preferences.language]);
+
+  // Process voice command - called immediately on recognition
+  const processVoiceCommand = useCallback((transcript) => {
+    if (isProcessing || hasRedirectedRef.current) return;
+    
+    const lowerTranscript = transcript.toLowerCase().trim();
+    
+    // Check for voice mode keywords
+    if (lowerTranscript.includes('voice') || lowerTranscript.includes('குரல்') || 
+        lowerTranscript.includes('speak') || lowerTranscript.includes('vocal')) {
+      setIsProcessing(true);
+      hasRedirectedRef.current = true;
+      return 'voice';
+    }
+    
+    // Check for normal/touch mode keywords
+    if (lowerTranscript.includes('normal') || lowerTranscript.includes('touch') || 
+        lowerTranscript.includes('click') || lowerTranscript.includes('சாதாரண') || 
+        lowerTranscript.includes('தொடு') || lowerTranscript.includes('standard')) {
+      setIsProcessing(true);
+      hasRedirectedRef.current = true;
+      return 'normal';
+    }
+    
+    return null;
+  }, [isProcessing]);
 
   // Speech recognition setup
   const setupSpeechRecognition = useCallback(() => {
@@ -47,110 +85,90 @@ const ModeSelection = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     
-    recognitionRef.current.continuous = true; // Enable continuous listening
-    recognitionRef.current.lang = preferences.language === 'ta' ? 'ta-IN' : 'en-US';
-    recognitionRef.current.interimResults = true; // Show interim results
+    recognitionRef.current.continuous = true;
+    recognitionRef.current.lang = preferences.language === 'ta' ? 'ta-IN' : 'en-IN';
+    recognitionRef.current.interimResults = true;
+    recognitionRef.current.maxAlternatives = 1;
 
     recognitionRef.current.onstart = () => {
       setIsListening(true);
-      setFeedbackMessage(getText('listening'));
+      setFeedbackMessage('Listening...');
     };
 
     recognitionRef.current.onresult = (event) => {
-      // Get the latest result
+      if (hasRedirectedRef.current) return;
+      
       const lastResultIndex = event.results.length - 1;
       const result = event.results[lastResultIndex];
+      const transcript = result[0].transcript;
+      
+      // Always show real-time spoken text
+      setSpokenText(transcript);
       
       if (result.isFinal) {
-        const transcript = result[0].transcript.toLowerCase().trim();
-        setFeedbackMessage(`"${transcript}"`);
+        // Process the command immediately on final result
+        const detectedMode = processVoiceCommand(transcript);
         
-        // Process voice command
-        if (transcript.includes('voice') || transcript.includes('குரல்')) {
-          handleModeSelect('voice');
-        } else if (transcript.includes('normal') || transcript.includes('touch') || transcript.includes('click') || 
-                  transcript.includes('சாதாரண') || transcript.includes('தொடு')) {
-          handleModeSelect('normal');
-        } else {
-          // Don't show error for continuous listening, just wait for next command
-          setFeedbackMessage(getText('listening'));
+        if (detectedMode) {
+          // Immediately handle mode selection
+          handleModeSelect(detectedMode, transcript);
         }
-      } else {
-        // Show interim results
-        const transcript = result[0].transcript;
-        setFeedbackMessage(`${getText('listening')}: "${transcript}..."`);
       }
     };
 
     recognitionRef.current.onerror = (event) => {
-      console.error('Speech recognition error', event.error);
+      console.error('Speech recognition error:', event.error);
       
-      // Handle different types of errors
       if (event.error === 'no-speech') {
-        // Restart listening after no speech
-        setTimeout(() => {
-          if (recognitionRef.current && !isListening) {
-            startListening();
-          }
-        }, 1000);
-      } else if (event.error === 'aborted') {
-        // Don't restart if aborted intentionally
+        // Silently restart for no-speech
+        if (!hasRedirectedRef.current) {
+          setTimeout(() => startListening(), 500);
+        }
+      } else if (event.error !== 'aborted') {
         setIsListening(false);
-      } else {
-        setIsListening(false);
-        setFeedbackMessage(getText('errorListening'));
-        
         // Try to restart after other errors
-        setTimeout(() => {
-          if (recognitionRef.current) {
-            startListening();
-          }
-        }, 2000);
+        if (!hasRedirectedRef.current) {
+          setTimeout(() => startListening(), 1000);
+        }
       }
     };
 
     recognitionRef.current.onend = () => {
       setIsListening(false);
-      
-      // Automatically restart listening unless mode was selected
-      if (!selectedMode || selectedMode === preferences.mode) {
-        setTimeout(() => {
-          if (recognitionRef.current) {
-            startListening();
-          }
-        }, 500);
+      // Auto-restart if not redirected
+      if (!hasRedirectedRef.current && !isProcessing) {
+        setTimeout(() => startListening(), 300);
       }
     };
-  }, [preferences.language, getText, selectedMode, isListening]);
+  }, [preferences.language, processVoiceCommand, isProcessing]);
 
   // Start listening
-  const startListening = () => {
-    if (recognitionRef.current) {
+  const startListening = useCallback(() => {
+    if (recognitionRef.current && !hasRedirectedRef.current) {
       try {
         recognitionRef.current.start();
       } catch (error) {
-        console.error('Speech recognition error on start:', error);
+        // Already started, ignore
       }
     }
-  };
+  }, []);
 
   // Stop listening
-  const stopListening = () => {
+  const stopListening = useCallback(() => {
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
       } catch (error) {
-        console.error('Speech recognition error on stop:', error);
+        // Already stopped, ignore
       }
     }
-  };
+  }, []);
 
-  // Initial setup
+  // Initial setup - Welcome and start listening
   useEffect(() => {
     // Check if user should be on this page
     const userData = JSON.parse(localStorage.getItem('ac_user') || '{}');
     if (!userData || !userData.user_id) {
-      // No user logged in, redirect to login
       navigate('/login');
       return;
     }
@@ -162,81 +180,88 @@ const ModeSelection = () => {
       return;
     }
 
+    // Setup speech recognition first
     setupSpeechRecognition();
     
-    // Welcome message for new users and start listening
-    const timer = setTimeout(() => {
-      speak(getText('selectMode'));
-      // Start continuous listening after welcome message
-      setTimeout(() => {
-        startListening();
-      }, 3000);
-    }, 1000);
-    
-    return () => {
-      clearTimeout(timer);
-      if (speakTimeoutRef.current) {
-        clearTimeout(speakTimeoutRef.current);
-      }
-      window.speechSynthesis.cancel();
-      if (recognitionRef.current) {
+    // Welcome message and start listening after speech ends
+    if (!hasSpoken) {
+      const welcomeMessage = "Welcome to Accessible Chennai. Please say Voice Mode or Normal Mode to continue.";
+      
+      const timer = setTimeout(() => {
+        speak(welcomeMessage, () => {
+          // Start listening immediately after welcome message ends
+          setHasSpoken(true);
+          startListening();
+        });
+      }, 500);
+      
+      return () => {
+        clearTimeout(timer);
+        if (speakTimeoutRef.current) {
+          clearTimeout(speakTimeoutRef.current);
+        }
+        window.speechSynthesis.cancel();
         stopListening();
-      }
-    };
-  }, [setupSpeechRecognition, speak, getText, navigate]);
-
-  // Handle mode selection
-  const handleModeSelect = async (mode) => {
-    setSelectedMode(mode);
-    
-    // Feedback based on selected mode
-    if (mode === 'voice') {
-      speak(getText('voiceModeSelected'));
-      setFeedbackMessage(getText('voiceModeSelected'));
-    } else {
-      speak(getText('normalModeSelected'));
-      setFeedbackMessage(getText('normalModeSelected'));
+      };
     }
+  }, [setupSpeechRecognition, speak, navigate, hasSpoken, startListening, stopListening]);
+
+  // Handle mode selection - immediate redirect
+  const handleModeSelect = async (mode, spokenTranscript = '') => {
+    if (hasRedirectedRef.current && selectedMode) return; // Already processing
     
-    // Stop listening when a mode is selected
+    hasRedirectedRef.current = true;
+    setSelectedMode(mode);
+    setIsProcessing(true);
+    
+    // Stop listening immediately
     stopListening();
     
-    // Prepare to save preferences
+    // Show what was spoken
+    if (spokenTranscript) {
+      setSpokenText(spokenTranscript);
+    }
+    
+    // Quick feedback
+    const feedbackMsg = mode === 'voice' 
+      ? 'Voice Mode selected. Redirecting...' 
+      : 'Normal Mode selected. Redirecting...';
+    setFeedbackMessage(feedbackMsg);
+    
+    // Speak confirmation briefly
+    speak(mode === 'voice' ? 'Voice Mode activated' : 'Normal Mode activated');
+    
     setIsSaving(true);
     
     try {
-      // Update preferences in context (which will also save to localStorage)
+      // Update preferences
       await updatePreferences({ mode });
       
       // Save to database if user is logged in
       const userData = JSON.parse(localStorage.getItem('ac_user') || '{}');
       if (userData && userData.user_id) {
         try {
-          const response = await fetch(`/api/user/${userData.user_id}/preferences`, {
+          await fetch(`/api/user/${userData.user_id}/preferences`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mode })
           });
-          
-          if (!response.ok) {
-            console.warn('Failed to save mode preference to server, but saved locally');
-          }
         } catch (serverError) {
-          console.error('Server error when saving preference:', serverError);
-          // Continue anyway as we've saved to localStorage
+          console.error('Server error:', serverError);
         }
       }
       
-      // Navigate to home after a short delay to allow the feedback message to be heard/read
+      // Quick redirect - 1.5 seconds to hear feedback
       setTimeout(() => {
         navigate('/');
-      }, 2000);
+      }, 1500);
+      
     } catch (error) {
       console.error('Failed to save mode preference:', error);
-      setFeedbackMessage(getText('errorSavingPreferences'));
+      setFeedbackMessage('Error saving preferences. Please try again.');
       setIsSaving(false);
+      setIsProcessing(false);
+      hasRedirectedRef.current = false;
     }
   };
 
@@ -247,15 +272,16 @@ const ModeSelection = () => {
     }
   };
 
-  // Handle voice activation
+  // Manual voice activation button
   const handleVoiceActivation = () => {
     if (isListening) {
       stopListening();
-      setFeedbackMessage('Voice recognition stopped');
+      setFeedbackMessage('Voice recognition paused');
     } else {
-      speak(getText('pleaseSpeak'));
-      setFeedbackMessage(getText('pleaseSpeak'));
-      startListening();
+      speak("Please say Voice Mode or Normal Mode", () => {
+        startListening();
+      });
+      setFeedbackMessage('Starting voice recognition...');
     }
   };
 
@@ -301,48 +327,48 @@ const ModeSelection = () => {
         
         <h1 style={{ 
           fontSize: '28px', 
-          marginBottom: '16px',
+          marginBottom: '8px',
           textAlign: 'center',
           color: 'var(--text-primary)'
         }}>
-          {getText('selectMode')}
+          Select Your Interaction Mode
         </h1>
         
-        {/* Continuous listening indicator */}
+        {/* Voice Recognition Status Indicator */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           gap: '8px',
-          marginBottom: '20px',
           padding: '8px 16px',
           borderRadius: '20px',
-          background: isListening ? 'rgba(25, 118, 210, 0.1)' : 'rgba(0, 0, 0, 0.05)',
-          border: isListening ? '1px solid var(--accent-color)' : '1px solid transparent'
+          background: isListening ? 'rgba(76, 175, 80, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+          border: isListening ? '1px solid #4CAF50' : '1px solid transparent'
         }}>
           <div style={{
-            width: '8px',
-            height: '8px',
+            width: '10px',
+            height: '10px',
             borderRadius: '50%',
-            background: isListening ? 'var(--accent-color)' : '#ccc',
-            animation: isListening ? 'blink 1s infinite' : 'none'
+            background: isListening ? '#4CAF50' : '#ccc',
+            animation: isListening ? 'pulse-dot 1s infinite' : 'none'
           }} />
           <span style={{
             fontSize: '14px',
-            color: isListening ? 'var(--accent-color)' : 'var(--text-secondary)',
+            color: isListening ? '#4CAF50' : 'var(--text-secondary)',
             fontWeight: '500'
           }}>
-            {isListening ? getText('continuousListening') : 'Voice recognition ready'}
+            {isListening ? 'Voice recognition ready' : 'Voice recognition ready'}
           </span>
         </div>
         
+        {/* Mode Selection Buttons */}
         <div style={{
           display: 'grid',
           gridTemplateColumns: '1fr 1fr',
           gap: '20px',
           width: '100%'
         }}>
-          {/* Normal Mode Option */}
+          {/* Touch/Click Mode Option */}
           <div
             role="button"
             tabIndex={0}
@@ -372,10 +398,11 @@ const ModeSelection = () => {
             </svg>
             <p style={{ 
               marginTop: '12px', 
-              fontWeight: '500',
-              textAlign: 'center' 
+              fontWeight: '600',
+              textAlign: 'center',
+              fontSize: '16px'
             }}>
-              {getText('normal')}
+              Touch/Click
             </p>
           </div>
           
@@ -409,10 +436,11 @@ const ModeSelection = () => {
             </svg>
             <p style={{ 
               marginTop: '12px', 
-              fontWeight: '500',
-              textAlign: 'center' 
+              fontWeight: '600',
+              textAlign: 'center',
+              fontSize: '16px'
             }}>
-              {getText('voice')}
+              Voice Mode
             </p>
           </div>
         </div>
@@ -420,59 +448,70 @@ const ModeSelection = () => {
         {/* Voice Activation Button */}
         <button
           onClick={handleVoiceActivation}
+          disabled={isProcessing}
           style={{
-            marginTop: '20px',
-            padding: '12px 20px',
+            marginTop: '16px',
+            padding: '12px 24px',
             borderRadius: '50px',
             background: isListening ? 'var(--accent-color)' : 'transparent',
-            color: isListening ? '#ffffff' : 'var(--text-primary)',
+            color: isListening ? '#ffffff' : 'var(--accent-color)',
             border: '2px solid var(--accent-color)',
-            cursor: 'pointer',
+            cursor: isProcessing ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
             transition: 'all 0.3s',
-            position: 'relative',
-            overflow: 'hidden'
+            opacity: isProcessing ? 0.6 : 1,
+            fontSize: '15px',
+            fontWeight: '500'
           }}
         >
-          {isListening && (
-            <div style={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              width: '120%',
-              height: '120%',
-              borderRadius: '50%',
-              transform: 'translate(-50%, -50%)',
-              animation: 'pulse 1.5s infinite',
-              background: 'rgba(255, 255, 255, 0.2)',
-              zIndex: 0
-            }} />
-          )}
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ position: 'relative', zIndex: 1 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path 
               d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z" 
               fill={isListening ? '#ffffff' : 'var(--accent-color)'}
             />
           </svg>
-          <span style={{ position: 'relative', zIndex: 1 }}>
-            {isListening ? getText('listening') + ' (Click to stop)' : getText('activateVoice')}
-          </span>
+          <span>Start Voice Recognition</span>
         </button>
+        
+        {/* Real-time Spoken Text Display - Large and Prominent */}
+        <div style={{
+          marginTop: '16px',
+          padding: '16px 20px',
+          borderRadius: '12px',
+          background: spokenText ? 'rgba(25, 118, 210, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+          border: spokenText ? '2px solid var(--accent-color)' : '2px solid transparent',
+          textAlign: 'center',
+          width: '100%',
+          minHeight: '60px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'all 0.3s ease'
+        }}>
+          <span style={{
+            fontSize: spokenText ? '18px' : '15px',
+            fontWeight: spokenText ? '600' : '400',
+            color: spokenText ? 'var(--accent-color)' : 'var(--text-secondary)',
+            fontStyle: spokenText ? 'normal' : 'italic'
+          }}>
+            {spokenText || (isListening ? 'Listening...' : 'Listening...')}
+          </span>
+        </div>
         
         {/* Feedback Message */}
         {feedbackMessage && (
           <div style={{
-            marginTop: '20px',
-            padding: '12px',
+            padding: '10px 16px',
             borderRadius: '8px',
-            background: 'rgba(0, 0, 0, 0.05)',
+            background: isProcessing ? 'rgba(76, 175, 80, 0.1)' : 'rgba(0, 0, 0, 0.05)',
             textAlign: 'center',
             width: '100%',
-            animation: 'fadeIn 0.5s',
-            color: 'var(--text-primary)'
+            animation: 'fadeIn 0.3s',
+            color: isProcessing ? '#4CAF50' : 'var(--text-secondary)',
+            fontSize: '14px'
           }}>
             {feedbackMessage}
           </div>
@@ -481,21 +520,23 @@ const ModeSelection = () => {
         {/* Loading Indicator during save */}
         {isSaving && (
           <div style={{
-            marginTop: '20px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '10px'
+            gap: '10px',
+            padding: '10px'
           }}>
             <div style={{
-              width: '20px',
-              height: '20px',
+              width: '24px',
+              height: '24px',
               border: '3px solid rgba(0, 0, 0, 0.1)',
               borderTop: '3px solid var(--accent-color)',
               borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
+              animation: 'spin 0.8s linear infinite'
             }} />
-            <span>{getText('saving')}</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
+              Redirecting...
+            </span>
           </div>
         )}
       </div>
@@ -503,27 +544,19 @@ const ModeSelection = () => {
       {/* Global animations */}
       <style>
         {`
-          @keyframes pulse {
-            0% {
-              opacity: 0;
-              transform: translate(-50%, -50%) scale(0.5);
+          @keyframes pulse-dot {
+            0%, 100% { 
+              opacity: 1; 
+              transform: scale(1);
             }
-            50% {
-              opacity: 0.3;
+            50% { 
+              opacity: 0.5; 
+              transform: scale(1.2);
             }
-            100% {
-              opacity: 0;
-              transform: translate(-50%, -50%) scale(1.2);
-            }
-          }
-          
-          @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.3; }
           }
           
           @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+            from { opacity: 0; transform: translateY(5px); }
             to { opacity: 1; transform: translateY(0); }
           }
           
