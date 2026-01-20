@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import MTCBusService from '../services/MTCBusService';
 import { usePreferences } from '../context/PreferencesContext';
 
-const MTCBusNavigation = () => {
+// Debounce helper for smooth performance
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+};
+
+const MTCBusNavigation = memo(() => {
   const { preferences } = usePreferences();
   const [fromArea, setFromArea] = useState('');
   const [toArea, setToArea] = useState('');
@@ -16,6 +26,14 @@ const MTCBusNavigation = () => {
   const [error, setError] = useState('');
   const [showDropdown, setShowDropdown] = useState({ from: false, to: false, search: false });
   const [mtcStatus, setMtcStatus] = useState(null);
+  const [searchQueryFrom, setSearchQueryFrom] = useState('');
+  const [searchQueryTo, setSearchQueryTo] = useState('');
+  const debouncedSearchFrom = useDebounce(searchQueryFrom, 100);
+  const debouncedSearchTo = useDebounce(searchQueryTo, 100);
+  const debouncedGeneralSearch = useDebounce(searchQuery, 150);
+
+  // Memoized areas list for performance
+  const allAreas = useMemo(() => MTCBusService.getAllAreas(), []);
 
   useEffect(() => {
     // Handle click outside to close dropdowns
@@ -47,27 +65,33 @@ const MTCBusNavigation = () => {
     fetchMTCStatus();
   }, []);
 
-  const handleAreaSearch = (query, type) => {
+  const handleAreaSearch = useCallback((query, type) => {
     if (!query) {
       setSearchResults(prev => ({ ...prev, [type]: [] }));
       return;
     }
     
-    const areas = MTCBusService.getAllAreas().filter(area =>
-      area.toLowerCase().includes(query.toLowerCase())
-    );
-    setSearchResults(prev => ({ ...prev, [type]: areas.slice(0, 8) }));
-  };
+    // Use requestAnimationFrame for smooth UI
+    requestAnimationFrame(() => {
+      const areas = MTCBusService.getAllAreas().filter(area =>
+        area.toLowerCase().includes(query.toLowerCase())
+      );
+      setSearchResults(prev => ({ ...prev, [type]: areas.slice(0, 8) }));
+    });
+  }, []);
 
-  const handleGeneralSearch = (query) => {
+  const handleGeneralSearch = useCallback((query) => {
     if (!query || query.length < 2) {
       setSearchResults(prev => ({ ...prev, routes: [], areas: [], stops: [] }));
       return;
     }
     
-    const results = MTCBusService.searchAll(query);
-    setSearchResults(prev => ({ ...prev, ...results }));
-  };
+    // Use requestAnimationFrame for smooth UI
+    requestAnimationFrame(() => {
+      const results = MTCBusService.searchAll(query);
+      setSearchResults(prev => ({ ...prev, ...results }));
+    });
+  }, []);
 
   const selectArea = (area, type) => {
     if (type === 'from') {
@@ -701,6 +725,6 @@ const MTCBusNavigation = () => {
       )}
     </div>
   );
-};
+});
 
 export default MTCBusNavigation;

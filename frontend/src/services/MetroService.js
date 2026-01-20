@@ -499,9 +499,16 @@ class MetroService {
     return Math.abs(toIndex - fromIndex);
   }
 
-  // Get all metro stations for autocomplete
+  // Cached all stations list for performance
+  static _cachedAllStations = null;
+
+  // Get all metro stations for autocomplete - optimized with caching
   getAllStations() {
-    return Object.keys(MetroService.METRO_STATIONS).map(name => ({
+    if (MetroService._cachedAllStations) {
+      return MetroService._cachedAllStations;
+    }
+    
+    MetroService._cachedAllStations = Object.keys(MetroService.METRO_STATIONS).map(name => ({
       name,
       ...MetroService.METRO_STATIONS[name]
     })).sort((a, b) => {
@@ -511,9 +518,15 @@ class MetroService {
       }
       return a.name.localeCompare(b.name);
     });
+    
+    return MetroService._cachedAllStations;
   }
 
-  // Search stations by name
+  // Station search cache for performance
+  static _searchCache = new Map();
+  static _searchCacheMaxSize = 50;
+
+  // Search stations by name - optimized with caching
   searchStations(query) {
     if (!query || query.length === 0) {
       // Return all stations if no query
@@ -525,7 +538,19 @@ class MetroService {
     }
     
     const normalized = query.toLowerCase();
-    return Object.keys(MetroService.METRO_STATIONS)
+    
+    // Check cache
+    if (MetroService._searchCache.has(normalized)) {
+      return MetroService._searchCache.get(normalized);
+    }
+    
+    // Clean cache if too large
+    if (MetroService._searchCache.size > MetroService._searchCacheMaxSize) {
+      const oldestKey = MetroService._searchCache.keys().next().value;
+      MetroService._searchCache.delete(oldestKey);
+    }
+    
+    const results = Object.keys(MetroService.METRO_STATIONS)
       .filter(name => 
         name.toLowerCase().includes(normalized) ||
         MetroService.METRO_STATIONS[name].code.toLowerCase().includes(normalized)
@@ -541,6 +566,10 @@ class MetroService {
         }
         return a.name.localeCompare(b.name);
       });
+    
+    // Cache results
+    MetroService._searchCache.set(normalized, results);
+    return results;
   }
 
   // Get real-time metro status (simulated - in real app, this would fetch from API)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, memo, lazy, Suspense } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faMapMarkerAlt, 
@@ -28,6 +28,16 @@ import { usePreferences } from '../context/PreferencesContext';
 import { useVoiceInterface } from '../utils/voiceUtils';
 import '../styles/metro.css';
 
+// Debounce helper for smooth performance
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+};
+
 const Navigate = () => {
   const { preferences, getThemeStyles, getCardStyles, getTextStyles, getButtonStyles, getText } = usePreferences();
   const [user] = useState({ name: 'User' });
@@ -44,6 +54,10 @@ const Navigate = () => {
   const [voiceInputMode, setVoiceInputMode] = useState(null); // 'from', 'to', or null
   const [showFullScreenMap, setShowFullScreenMap] = useState(false);
   const [dataRestored, setDataRestored] = useState(false);
+  const [searchQueryFrom, setSearchQueryFrom] = useState('');
+  const [searchQueryTo, setSearchQueryTo] = useState('');
+  const debouncedSearchFrom = useDebounce(searchQueryFrom, 150);
+  const debouncedSearchTo = useDebounce(searchQueryTo, 150);
   const fromInputRef = useRef(null);
   const toInputRef = useRef(null);
   const fromSuggestionsRef = useRef(null);

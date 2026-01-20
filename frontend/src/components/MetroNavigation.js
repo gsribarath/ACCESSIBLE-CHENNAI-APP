@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import MetroService from '../services/MetroService';
 import { usePreferences } from '../context/PreferencesContext';
 
-const MetroNavigation = () => {
+// Debounce helper for smooth performance
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+};
+
+const MetroNavigation = memo(() => {
   const { getCardStyles, getTextStyles } = usePreferences();
   const [fromStation, setFromStation] = useState('');
   const [toStation, setToStation] = useState('');
@@ -14,6 +24,15 @@ const MetroNavigation = () => {
   const [error, setError] = useState('');
   const [showDropdown, setShowDropdown] = useState({ from: false, to: false });
   const [showSchedule, setShowSchedule] = useState(false);
+  const [searchQueryFrom, setSearchQueryFrom] = useState('');
+  const [searchQueryTo, setSearchQueryTo] = useState('');
+  const debouncedSearchFrom = useDebounce(searchQueryFrom, 100);
+  const debouncedSearchTo = useDebounce(searchQueryTo, 100);
+
+  // Memoized station search for performance
+  const memoizedSearchStations = useMemo(() => {
+    return (query) => MetroService.searchStations(query);
+  }, []);
 
   // Load metro status on component mount
   useEffect(() => {
@@ -42,20 +61,25 @@ const MetroNavigation = () => {
     }
   };
 
-  const handleStationSearch = (query, type) => {
-    const results = MetroService.searchStations(query);
-    setSearchResults(prev => ({ ...prev, [type]: results }));
-    setShowDropdown(prev => ({ ...prev, [type]: true }));
-  };
+  const handleStationSearch = useCallback((query, type) => {
+    // Use requestAnimationFrame for smooth UI
+    requestAnimationFrame(() => {
+      const results = MetroService.searchStations(query);
+      setSearchResults(prev => ({ ...prev, [type]: results }));
+      setShowDropdown(prev => ({ ...prev, [type]: true }));
+    });
+  }, []);
 
-  const handleInputFocus = (type) => {
-    // Show all stations when input is focused
-    const allStations = MetroService.getAllStations();
-    setSearchResults(prev => ({ ...prev, [type]: allStations }));
-    setShowDropdown(prev => ({ ...prev, [type]: true }));
-  };
+  const handleInputFocus = useCallback((type) => {
+    // Show all stations when input is focused with requestAnimationFrame
+    requestAnimationFrame(() => {
+      const allStations = MetroService.getAllStations();
+      setSearchResults(prev => ({ ...prev, [type]: allStations }));
+      setShowDropdown(prev => ({ ...prev, [type]: true }));
+    });
+  }, []);
 
-  const selectStation = (station, type) => {
+  const selectStation = useCallback((station, type) => {
     if (type === 'from') {
       setFromStation(station.name);
       setShowDropdown(prev => ({ ...prev, from: false }));
@@ -67,7 +91,7 @@ const MetroNavigation = () => {
       setShowDropdown(prev => ({ ...prev, to: false }));
       setSearchResults(prev => ({ ...prev, to: [] }));
     }
-  };
+  }, []);
 
   const loadLiveTimings = async (stationName) => {
     try {
@@ -887,6 +911,6 @@ const MetroNavigation = () => {
       )}
     </div>
   );
-};
+});
 
 export default MetroNavigation;

@@ -109,8 +109,20 @@ function Settings() {
   }, [interactionMode, speak, setupSpeechRecognition, startListening, updatePreferences, getText]);
 
   const handleLogout = () => {
+    // Clear all user data and preferences to force mode selection on next login
     localStorage.removeItem('ac_user');
-    window.location.href = '/login';
+    localStorage.removeItem('ac_prefs');
+    localStorage.removeItem('ac_notifications');
+    localStorage.removeItem('ac_privacy');
+    
+    // Speak confirmation in voice mode
+    if (interactionMode === 'voice' && speak) {
+      speak('Logging out. You will need to select your mode again on next login.').then(() => {
+        window.location.href = '/login';
+      });
+    } else {
+      window.location.href = '/login';
+    }
   };
 
   const saveSettings = () => {
@@ -732,37 +744,63 @@ function Settings() {
           </div>
         </SettingCard>
 
-        {/* Account Actions */}
-        <SettingCard title={getText('account')}>
-          <div style={{ textAlign: 'center' }}>
-            <button
-              onClick={handleLogout}
-              style={{
-                ...getButtonStyles('danger'),
-                padding: '16px 24px',
-                borderRadius: 12,
-                fontSize: 16,
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 12,
-                width: '100%',
-                maxWidth: '300px',
-                margin: '0 auto'
-              }}
-            >
-              {getText('logout')}
-            </button>
-            <p style={{
-              margin: '12px 0 0 0',
-              fontSize: 14,
-              ...getTextStyles('secondary')
-            }}>
-              Sign out of your account and return to login page
-            </p>
-          </div>
-        </SettingCard>
+        {/* Logout Section - Prominent placement */}
+        <div style={{
+          ...getCardStyles(),
+          padding: '32px 24px',
+          borderRadius: 16,
+          marginBottom: 20,
+          textAlign: 'center',
+          border: '2px solid rgba(244, 67, 54, 0.2)',
+          background: theme === 'dark' 
+            ? 'linear-gradient(135deg, rgba(244, 67, 54, 0.05) 0%, rgba(211, 47, 47, 0.05) 100%)'
+            : 'linear-gradient(135deg, rgba(244, 67, 54, 0.02) 0%, rgba(211, 47, 47, 0.02) 100%)'
+        }}>
+          <h3 style={{
+            margin: '0 0 12px 0',
+            fontSize: 20,
+            fontWeight: 600,
+            ...getTextStyles('primary')
+          }}>
+            {getText('logout') || 'Logout'}
+          </h3>
+          <p style={{
+            margin: '0 0 20px 0',
+            fontSize: 14,
+            lineHeight: 1.5,
+            ...getTextStyles('secondary')
+          }}>
+            Sign out of your account. You will need to select your mode (Voice/Normal) again when you log back in.
+          </p>
+          <button
+            onClick={handleLogout}
+            style={{
+              ...getButtonStyles('danger'),
+              padding: '16px 32px',
+              borderRadius: 12,
+              fontSize: 16,
+              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              minWidth: '200px',
+              boxShadow: '0 4px 12px rgba(244, 67, 54, 0.2)',
+              transition: 'all 0.3s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(244, 67, 54, 0.3)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(244, 67, 54, 0.2)';
+            }}
+          >
+            <span style={{ fontSize: '18px' }}>🚪</span>
+            {getText('logout') || 'Logout'}
+          </button>
+        </div>
       </main>
       
       {/* Global animations for voice mode */}

@@ -15,7 +15,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 import Navigation from '../components/Navigation';
-import { useVoiceInterface, getVoiceCommands } from '../utils/voiceUtils';
+import { useVoiceInterface, VOICE_MODE_INTRO, processVoiceCommand } from '../utils/voiceUtils';
 
 function Home() {
   const [user, setUser] = useState(null);
@@ -35,7 +35,9 @@ function Home() {
     stopListening
   } = useVoiceInterface();
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [voiceSetupComplete, setVoiceSetupComplete] = useState(false);
 
+  // First useEffect: Load user and set greeting
   useEffect(() => {
     const userData = localStorage.getItem('ac_user');
     const prefs = localStorage.getItem('ac_prefs');
@@ -56,44 +58,59 @@ function Home() {
     if (hour < 12) setGreeting(getText('goodMorning'));
     else if (hour < 18) setGreeting(getText('goodAfternoon'));
     else setGreeting(getText('goodEvening'));
+  }, [navigate, getText]);
 
-    // Setup voice commands for voice mode
-    if (isVoiceMode) {
-      speak(`${greeting}! Welcome to Accessible Chennai. You can say: map, community, settings, about us, or help`);
+  // Second useEffect: Setup voice commands for voice mode
+  useEffect(() => {
+    if (!isVoiceMode || !user || voiceSetupComplete) {
+      return;
+    }
 
+    // Speak the comprehensive introduction first
+    speak(VOICE_MODE_INTRO, true).then(() => {
+      // After intro, start listening for commands
       if (setupSpeechRecognition) {
         setupSpeechRecognition((command) => {
-          const cleanCommand = command.toLowerCase().trim();
+          const result = processVoiceCommand(command);
           
-          if (cleanCommand.includes('map') || cleanCommand.includes('navigate')) {
-            speak('Going to Navigation');
-            navigate('/navigate');
-          } else if (cleanCommand.includes('community')) {
-            speak('Going to Community');
-            navigate('/community');
-          } else if (cleanCommand.includes('settings')) {
-            speak('Going to Settings');
-            navigate('/settings');
-          } else if (cleanCommand.includes('about') || cleanCommand.includes('about us')) {
-            speak('About Accessible Chennai');
-            // For now, we'll show a voice description since about is part of the home page
-            speak('Accessible Chennai is your trusted navigation companion for people with disabilities. We provide barrier-free routes, real-time accessibility information, and community support to make Chennai more accessible for everyone.');
-          } else if (cleanCommand.includes('logout') || cleanCommand.includes('exit')) {
-            speak('Logging out');
-            handleLogout();
-          } else if (cleanCommand.includes('help')) {
-            speak('Available commands: map for navigation, community to connect, settings for preferences, about us to learn more, or logout to exit');
-          } else {
-            speak('Command not recognized. Try saying: map, community, settings, about us, or help');
+          if (result.action === 'navigate') {
+            const destination = result.destination || '/navigate';
+            const pageName = destination.replace('/', '').replace(/^\w/, c => c.toUpperCase());
+            speak(`Opening ${pageName} page`).then(() => {
+              navigate(destination);
+            });
+          } else if (result.action === 'nearbyBusStop') {
+            speak('Finding nearby bus stops. Please wait.').then(() => {
+              // Navigate to navigation page with nearby search active
+              navigate('/navigate', { state: { searchNearby: true } });
+            });
+          } else if (result.action === 'accessibleRoute') {
+            speak('Opening accessible route planning. Please specify your destination.').then(() => {
+              navigate('/navigate', { state: { accessibleOnly: true } });
+            });
+          } else if (result.action === 'repeatIntro') {
+            speak(VOICE_MODE_INTRO, true);
+          } else if (result.action === 'exitVoiceMode') {
+            speak('Switching to Normal Mode').then(() => {
+              // Update preferences to normal mode
+              const currentPrefs = JSON.parse(localStorage.getItem('ac_prefs') || '{}');
+              const updatedPrefs = { ...currentPrefs, mode: 'normal' };
+              localStorage.setItem('ac_prefs', JSON.stringify(updatedPrefs));
+              window.location.reload();
+            });
+          } else if (result.action === 'unknown') {
+            speak('I did not understand that. Please repeat your command slowly.');
           }
         });
 
         setTimeout(() => {
           startListening();
         }, 1000);
+        
+        setVoiceSetupComplete(true);
       }
-    }
-  }, [navigate, getText, isVoiceMode, preferences.language, speak, setupSpeechRecognition, startListening, greeting]);
+    });
+  }, [isVoiceMode, user, voiceSetupComplete]); // Removed function dependencies
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
@@ -126,13 +143,6 @@ function Home() {
       path: '/settings',
       icon: faCog,
       gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-    },
-    { 
-      title: 'About Us', 
-      desc: 'Learn about our mission', 
-      path: '#about',
-      icon: faInfoCircle,
-      gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
     }
   ];
 
@@ -398,14 +408,6 @@ function Home() {
                   icon: faCog,
                   title: 'Accessibility Settings',
                   description: 'Customize your experience'
-                },
-                { 
-                  color: '#F59E0B',
-                  bgColor: 'rgba(245, 158, 11, 0.1)',
-                  borderColor: 'rgba(245, 158, 11, 0.2)',
-                  icon: faHandPaper,
-                  title: 'About Us',
-                  description: 'Discover our accessibility mission'
                 }
               ];
               const currentAction = actionData[index] || actionData[0];
@@ -413,17 +415,7 @@ function Home() {
               return (
                 <div
                   key={action.title}
-                  onClick={() => {
-                    if (action.title === 'About Us') {
-                      // Scroll to the about section
-                      const aboutSection = document.querySelector('[data-section="about"]');
-                      if (aboutSection) {
-                        aboutSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    } else {
-                      navigate(action.path);
-                    }
-                  }}
+                  onClick={() => navigate(action.path)}
                   style={{
                     ...getCardStyles(),
                     padding: '24px',
@@ -539,296 +531,7 @@ function Home() {
           </div>
         </section>
 
-        {/* About Us Section - Rapido Style */}
-        <section 
-          data-section="about"
-          style={{ 
-            ...getCardStyles(),
-            padding: '60px 40px', 
-            borderRadius: '24px',
-            marginBottom: '24px',
-            position: 'relative',
-            overflow: 'hidden',
-            background: preferences.theme === 'dark' ? 
-              'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(51, 65, 85, 0.9) 100%)' : 
-              'linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid rgba(59, 130, 246, 0.2)',
-            boxShadow: '0 20px 60px rgba(59, 130, 246, 0.15)'
-          }}>
-          
-          {/* About Us Heading */}
-          <div style={{ 
-            textAlign: 'left',
-            marginBottom: '40px'
-          }}>
-            <h1 style={{ 
-              margin: '0 0 8px 0', 
-              fontSize: '24px', 
-              fontWeight: '600',
-              fontFamily: 'var(--font-heading)',
-              color: '#000000',
-              textTransform: 'uppercase',
-              letterSpacing: '2px'
-            }}>
-              About Us
-            </h1>
-          </div>
-          
-          <div style={{ 
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '60px',
-            alignItems: 'center',
-            position: 'relative',
-            zIndex: 2
-          }}>
-            {/* Left Content */}
-            <div>
-              <h2 style={{ 
-                margin: '0 0 12px 0', 
-                fontSize: '48px', 
-                fontWeight: '800',
-                fontFamily: 'var(--font-heading)',
-                letterSpacing: '-0.02em',
-                lineHeight: '1.1',
-                ...getTextStyles('primary')
-              }}>
-                Chennai's Beloved
-              </h2>
-              <h3 style={{ 
-                margin: '0 0 24px 0', 
-                fontSize: '36px', 
-                fontWeight: '700',
-                fontFamily: 'var(--font-heading)',
-                letterSpacing: '-0.01em',
-                lineHeight: '1.2',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text'
-              }}>
-                Accessible Navigation Service
-              </h3>
-              
-              <div style={{ marginBottom: '32px' }}>
-                <h4 style={{ 
-                  margin: '0 0 16px 0', 
-                  fontSize: '18px', 
-                  fontWeight: '600',
-                  fontFamily: 'var(--font-heading)',
-                  ...getTextStyles('primary')
-                }}>
-                  We are not an option, we are a choice
-                </h4>
-                <p style={{ 
-                  margin: '0 0 20px 0', 
-                  fontSize: '16px',
-                  fontFamily: 'var(--font-secondary)',
-                  lineHeight: '1.6',
-                  ...getTextStyles('secondary')
-                }}>
-                  We're the #1 choice of millions of people with disabilities because we're the 
-                  complete solution to Chennai's accessibility challenges. With assured safety, 
-                  we provide barrier-free navigation and economically accessible routes. Our mission 
-                  is to make Chennai accessible for everyone, ensuring that mobility challenges 
-                  never limit your potential to explore, work, and live independently.
-                </p>
-              </div>
 
-              <div style={{ marginBottom: '32px' }}>
-                <h4 style={{ 
-                  margin: '0 0 16px 0', 
-                  fontSize: '18px', 
-                  fontWeight: '600',
-                  fontFamily: 'var(--font-heading)',
-                  ...getTextStyles('primary')
-                }}>
-                  What makes us different?
-                </h4>
-                <p style={{ 
-                  margin: 0, 
-                  fontSize: '16px',
-                  fontFamily: 'var(--font-secondary)',
-                  lineHeight: '1.6',
-                  ...getTextStyles('secondary')
-                }}>
-                  Our intelligent accessibility features can navigate around barriers during peak hours and get 
-                  you to your destination with confidence and ease! From voice-guided navigation to real-time 
-                  accessibility updates, we ensure every journey is smooth and inclusive.
-                </p>
-              </div>
-
-              {/* Key Features Summary */}
-              <div style={{
-                padding: '24px',
-                background: preferences.theme === 'dark' ? 
-                  'rgba(59, 130, 246, 0.1)' : 
-                  'rgba(59, 130, 246, 0.05)',
-                borderRadius: '16px',
-                border: '1px solid rgba(59, 130, 246, 0.2)'
-              }}>
-                <h5 style={{ 
-                  margin: '0 0 12px 0', 
-                  fontSize: '16px', 
-                  fontWeight: '600',
-                  fontFamily: 'var(--font-heading)',
-                  color: '#3b82f6'
-                }}>
-                  🚀 Core Features
-                </h5>
-                <p style={{ 
-                  margin: 0, 
-                  fontSize: '14px',
-                  fontFamily: 'var(--font-secondary)',
-                  lineHeight: '1.5',
-                  ...getTextStyles('secondary')
-                }}>
-                  <strong>Voice Navigation</strong> • <strong>Wheelchair Routes</strong> • <strong>Visual/Audio Aids</strong> • <strong>Real-time Metro/Bus</strong> • <strong>Community Support</strong> • <strong>Emergency Assistance</strong> • <strong>Offline Maps</strong> • <strong>Multi-language Support</strong>
-                </p>
-              </div>
-            </div>
-
-            {/* Right Visual */}
-            <div style={{ 
-              position: 'relative',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
-              {/* Main circular design inspired by Rapido */}
-              <div style={{
-                width: '320px',
-                height: '320px',
-                background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                boxShadow: '0 20px 60px rgba(59, 130, 246, 0.3)'
-              }}>
-                {/* Inner circle */}
-                <div style={{
-                  width: '240px',
-                  height: '240px',
-                  background: preferences.theme === 'dark' ? 
-                    'rgba(30, 41, 59, 0.9)' : 
-                    'rgba(255, 255, 255, 0.95)',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  {/* Accessibility icon */}
-                  <div style={{
-                    fontSize: '48px',
-                    marginBottom: '16px',
-                    color: '#3b82f6'
-                  }}>
-                    ♿
-                  </div>
-                  <div style={{
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ 
-                      fontSize: '24px', 
-                      fontWeight: '700',
-                      fontFamily: 'var(--font-heading)',
-                      color: '#3b82f6',
-                      marginBottom: '8px'
-                    }}>
-                      50K+
-                    </div>
-                    <div style={{ 
-                      fontSize: '14px',
-                      fontFamily: 'var(--font-ui)',
-                      ...getTextStyles('secondary')
-                    }}>
-                      Happy Users
-                    </div>
-                  </div>
-                </div>
-
-                {/* Floating stats */}
-                <div style={{
-                  position: 'absolute',
-                  top: '20px',
-                  right: '-20px',
-                  background: preferences.theme === 'dark' ? 
-                    'rgba(30, 41, 59, 0.95)' : 
-                    'rgba(255, 255, 255, 0.95)',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <div style={{ 
-                    fontSize: '16px', 
-                    fontWeight: '600',
-                    color: '#3b82f6',
-                    marginBottom: '4px'
-                  }}>
-                    100K+
-                  </div>
-                  <div style={{ 
-                    fontSize: '12px',
-                    ...getTextStyles('secondary')
-                  }}>
-                    Routes
-                  </div>
-                </div>
-
-                <div style={{
-                  position: 'absolute',
-                  bottom: '20px',
-                  left: '-20px',
-                  background: preferences.theme === 'dark' ? 
-                    'rgba(30, 41, 59, 0.95)' : 
-                    'rgba(255, 255, 255, 0.95)',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  boxShadow: '0 8px 25px rgba(0, 0, 0, 0.15)',
-                  backdropFilter: 'blur(10px)'
-                }}>
-                  <div style={{ 
-                    fontSize: '16px', 
-                    fontWeight: '600',
-                    color: '#8b5cf6',
-                    marginBottom: '4px'
-                  }}>
-                    99%
-                  </div>
-                  <div style={{ 
-                    fontSize: '12px',
-                    ...getTextStyles('secondary')
-                  }}>
-                    Satisfaction
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile responsive adjustments */}
-          <style>{`
-            @media (max-width: 768px) {
-              [data-section="about"] > div > div {
-                grid-template-columns: 1fr !important;
-                gap: 40px !important;
-                text-align: center;
-              }
-              [data-section="about"] h2 {
-                font-size: 36px !important;
-              }
-              [data-section="about"] h3 {
-                font-size: 28px !important;
-              }
-            }
-          `}</style>
-        </section>
       </main>
 
       {/* Custom keyframes for animations */}

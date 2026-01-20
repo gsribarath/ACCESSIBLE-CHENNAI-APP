@@ -1,27 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBell, faHome, faMapMarkedAlt, faExclamationTriangle, faUsers, faCog } from '@fortawesome/free-solid-svg-icons';
+import { faRobot, faHome, faMapMarkedAlt, faExclamationTriangle, faUsers, faCog } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
+import AIAssistant from './AIAssistant';
 
 function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { getText, getButtonStyles, getTextStyles } = usePreferences();
-  
-  // Mock notification count (in real app, this would come from API or context)
-  const [notificationCount, setNotificationCount] = useState(3);
-
-  useEffect(() => {
-    // Simulate live notifications (in real app, this would be WebSocket or polling)
-    const interval = setInterval(() => {
-      // Randomly update notification count to simulate real-time updates
-      const randomCount = Math.floor(Math.random() * 10);
-      setNotificationCount(randomCount);
-    }, 30000); // Update every 30 seconds
-
-    return () => clearInterval(interval);
-  }, []);
+  const [showAIChat, setShowAIChat] = useState(false);
 
   const navItems = [
     { label: getText('home'), path: '/', icon: faHome },
@@ -89,54 +77,41 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
         
         {user && (
           <button 
-            onClick={() => navigate('/alerts')}
+            onClick={() => setShowAIChat(true)}
             style={{ 
-              background: 'none',
+              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
               border: 'none',
-              padding: '8px 12px', 
-              borderRadius: 8, 
-              fontSize: 'var(--font-size-lg)',
+              padding: '10px 16px', 
+              borderRadius: 12, 
+              fontSize: '16px',
               cursor: 'pointer',
-              transition: 'all 0.2s',
-              position: 'relative',
-              color: 'var(--text-primary)',
+              transition: 'all 0.3s',
+              color: 'white',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
+              fontWeight: '500'
             }}
             onMouseEnter={(e) => {
-              e.target.style.backgroundColor = 'var(--bg-hover)';
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.4)';
             }}
             onMouseLeave={(e) => {
-              e.target.style.backgroundColor = 'transparent';
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 2px 8px rgba(25, 118, 210, 0.3)';
             }}
-            title="View Notifications"
+            title="Chat with AI Assistant"
           >
-            <FontAwesomeIcon icon={faBell} />
-            {notificationCount > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                backgroundColor: '#f44336',
-                color: 'white',
-                borderRadius: '50%',
-                width: '20px',
-                height: '20px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '20px',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-              }}>
-                {notificationCount > 9 ? '9+' : notificationCount}
-              </span>
-            )}
+            <FontAwesomeIcon icon={faRobot} />
+            <span>AI Help</span>
           </button>
         )}
       </header>
+      
+      {/* AI Assistant Chat */}
+      {user && <AIAssistant isOpen={showAIChat} onClose={() => setShowAIChat(false)} />}
 
       {/* Bottom Navigation */}
       {showBottomNav && user && (

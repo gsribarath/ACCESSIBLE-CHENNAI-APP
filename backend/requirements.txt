@@ -6,3 +6,4 @@ python-dotenv
 Flask-Login
 requests
 google-auth
+google-auth-oauthlib

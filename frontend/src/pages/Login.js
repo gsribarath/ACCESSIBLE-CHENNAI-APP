@@ -39,12 +39,16 @@ function Login() {
       }
       localStorage.setItem('ac_user', JSON.stringify(userData));
       
-      // Check if this is a new registration (mode selection needed) or existing user
-      if (params.get('register_success') || params.get('google_success')) {
-        // For new users, redirect to mode selection
+      // Check if user has preferences set
+      const existingPrefs = localStorage.getItem('ac_prefs');
+      const hasPrefs = existingPrefs && Object.keys(JSON.parse(existingPrefs)).length > 0;
+      
+      // Check if this is a new registration (mode selection needed) or existing user without prefs
+      if (params.get('register_success') || params.get('google_success') || !hasPrefs) {
+        // For new users or users without preferences, redirect to mode selection
         window.location.href = '/mode-selection';
       } else {
-        // For existing users, go directly to home
+        // For existing users with preferences, go directly to home
         window.location.href = '/';
       }
     }
@@ -67,17 +71,45 @@ function Login() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, preferences: prefs }),
       });
-      const data = await res.json();
+      
+      // Check if backend is accessible
+      if (!res.ok && res.status === 500) {
+        const text = await res.text();
+        console.error('Server error response:', text);
+        if (text.includes('Proxy error')) {
+          setError('Backend server is not running. Please start the backend server on port 5000.');
+          return;
+        }
+      }
+      
+      // Try to parse as JSON
+      let data;
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.error('Failed to parse JSON:', jsonErr);
+        setError('Server returned an invalid response. Please ensure the backend is running properly.');
+        return;
+      }
+      
       console.log('Login response:', data, 'Status:', res.status);
       if (res.ok) {
         localStorage.setItem('ac_user', JSON.stringify({ email, user_id: data.user_id }));
+        
+        // Check if user has preferences set
+        const existingPrefs = localStorage.getItem('ac_prefs');
+        const hasPrefs = existingPrefs && Object.keys(JSON.parse(existingPrefs)).length > 0;
         
         if (isRegister && data.is_new_user) {
           // New user registration - go to mode selection
           console.log('Navigating to mode selection for new user...');
           window.location.href = '/mode-selection';
+        } else if (!hasPrefs) {
+          // Existing user but no preferences (e.g., after logout) - go to mode selection
+          console.log('No preferences found, navigating to mode selection...');
+          window.location.href = '/mode-selection';
         } else {
-          // Existing user login - go to home
+          // Existing user with preferences - go to home
           console.log('Navigating to home for existing user...');
           window.location.href = '/';
         }
@@ -86,7 +118,7 @@ function Login() {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Server error');
+      setError('Cannot connect to server. Please make sure the backend is running on port 5000.');
     }
   };
 

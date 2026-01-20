@@ -1,6 +1,27 @@
 // Location service for GPS and geocoding functionality
+// Performance optimization: Cache for search results
+const searchCache = new Map();
+const CACHE_MAX_SIZE = 100;
+const CACHE_TTL = 60000; // 1 minute
+
 class LocationService {
+  // Optimized location suggestions with caching
   static getLocationSuggestions(query) {
+    // Check cache first for performance
+    const cacheKey = query?.toLowerCase()?.trim() || '';
+    if (searchCache.has(cacheKey)) {
+      const cached = searchCache.get(cacheKey);
+      if (Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.results;
+      }
+    }
+    
+    // Clean cache if too large
+    if (searchCache.size > CACHE_MAX_SIZE) {
+      const oldestKey = searchCache.keys().next().value;
+      searchCache.delete(oldestKey);
+    }
+    
     // Comprehensive Chennai locations database for suggestions
     const locations = [
       // Metro Stations - Blue Line
@@ -433,11 +454,13 @@ class LocationService {
 
     // If no query, return popular locations (first 8)
     if (!query || query.trim() === '') {
-      return locations.slice(0, 8);
+      const results = locations.slice(0, 8);
+      searchCache.set(cacheKey, { results, timestamp: Date.now() });
+      return results;
     }
 
     const searchQuery = query.toLowerCase().trim();
-    return locations
+    const results = locations
       .filter(location => 
         location.toLowerCase().includes(searchQuery) ||
         searchQuery.split(' ').some(word => 
@@ -455,6 +478,10 @@ class LocationService {
         
         return a.length - b.length;
       });
+    
+    // Cache the results
+    searchCache.set(cacheKey, { results, timestamp: Date.now() });
+    return results;
   }
 
   static async getCurrentLocation() {

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo, memo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faRoute, 
@@ -13,7 +13,8 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
 
-const EnhancedMap = ({ route, fromLocation, toLocation, routeCoordinates, isNavigating, currentStep }) => {
+// Memoized map component to prevent unnecessary re-renders
+const EnhancedMap = memo(({ route, fromLocation, toLocation, routeCoordinates, isNavigating, currentStep }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,25 +56,32 @@ const EnhancedMap = ({ route, fromLocation, toLocation, routeCoordinates, isNavi
 
   useEffect(() => {
     let timeoutId;
+    let isMounted = true;
     
     const initializeMap = async () => {
+      if (!isMounted) return;
+      
       try {
         setIsLoading(true);
         
-        // Try to load Leaflet for 3 seconds, then fallback to visual map
+        // Faster fallback - 2 seconds instead of 3
         timeoutId = setTimeout(() => {
-          console.log('Switching to visual map representation');
-          setUseVisualMap(true);
-          setIsLoading(false);
-        }, 3000);
+          if (isMounted) {
+            console.log('Switching to visual map representation');
+            setUseVisualMap(true);
+            setIsLoading(false);
+          }
+        }, 2000);
 
         if (await loadLeaflet()) {
           clearTimeout(timeoutId);
-          createLeafletMap();
+          if (isMounted) createLeafletMap();
         } else {
           clearTimeout(timeoutId);
-          setUseVisualMap(true);
-          setIsLoading(false);
+          if (isMounted) {
+            setUseVisualMap(true);
+            setIsLoading(false);
+          }
         }
       } catch (error) {
         console.error('Map initialization error:', error);
@@ -603,6 +611,6 @@ const EnhancedMap = ({ route, fromLocation, toLocation, routeCoordinates, isNavi
       )}
     </div>
   );
-};
+});
 
 export default EnhancedMap;

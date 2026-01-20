@@ -177,10 +177,27 @@ class MTCBusService {
   }
 
   // Search bus routes by area or destination
+  // Route search cache for performance
+  static _routeSearchCache = new Map();
+  static _cacheMaxSize = 50;
+
+  // Search bus routes - optimized with caching
   searchRoutes(query) {
     if (!query || query.length < 2) return [];
     
     const normalizedQuery = query.toLowerCase();
+    
+    // Check cache
+    if (MTCBusService._routeSearchCache.has(normalizedQuery)) {
+      return MTCBusService._routeSearchCache.get(normalizedQuery);
+    }
+    
+    // Clean cache if too large
+    if (MTCBusService._routeSearchCache.size > MTCBusService._cacheMaxSize) {
+      const oldestKey = MTCBusService._routeSearchCache.keys().next().value;
+      MTCBusService._routeSearchCache.delete(oldestKey);
+    }
+    
     const results = [];
     
     Object.entries(MTCBusService.BUS_ROUTES).forEach(([number, route]) => {
@@ -190,15 +207,29 @@ class MTCBusService {
       }
     });
     
-    return results.slice(0, 10); // Limit results
+    const limitedResults = results.slice(0, 10);
+    
+    // Cache results
+    MTCBusService._routeSearchCache.set(normalizedQuery, limitedResults);
+    return limitedResults;
   }
 
-  // Get routes between two areas
+  // Route between areas cache
+  static _routeBetweenCache = new Map();
+
+  // Get routes between two areas - optimized with caching
   getRoutesBetween(from, to) {
     if (!from || !to) return [];
     
     const fromNormalized = from.toLowerCase();
     const toNormalized = to.toLowerCase();
+    const cacheKey = `${fromNormalized}-${toNormalized}`;
+    
+    // Check cache
+    if (MTCBusService._routeBetweenCache.has(cacheKey)) {
+      return MTCBusService._routeBetweenCache.get(cacheKey);
+    }
+    
     const matchingRoutes = [];
     
     Object.entries(MTCBusService.BUS_ROUTES).forEach(([number, route]) => {
@@ -221,16 +252,26 @@ class MTCBusService {
       }
     });
     
+    // Cache results
+    MTCBusService._routeBetweenCache.set(cacheKey, matchingRoutes);
     return matchingRoutes;
   }
 
-  // Get all areas for autocomplete
+  // Cached all areas for performance
+  static _cachedAllAreas = null;
+
+  // Get all areas for autocomplete - optimized with caching
   getAllAreas() {
+    if (MTCBusService._cachedAllAreas) {
+      return MTCBusService._cachedAllAreas;
+    }
+    
     const allAreas = [];
     Object.values(MTCBusService.CHENNAI_AREAS).forEach(areas => {
       allAreas.push(...areas);
     });
-    return [...new Set(allAreas)].sort();
+    MTCBusService._cachedAllAreas = [...new Set(allAreas)].sort();
+    return MTCBusService._cachedAllAreas;
   }
 
   // Get bus stops near a location
