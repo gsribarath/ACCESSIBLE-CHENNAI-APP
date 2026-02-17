@@ -23,6 +23,7 @@ import MetroNavigation from '../components/MetroNavigation';
 import MTCBusNavigation from '../components/MTCBusNavigation';
 import EnhancedMap from '../components/EnhancedMap';
 import FullScreenMap from '../components/FullScreenMap';
+import LocationDropdownPicker from '../components/LocationDropdownPicker';
 import LocationService from '../services/LocationService';
 import { usePreferences } from '../context/PreferencesContext';
 import { useVoiceInterface } from '../utils/voiceUtils';
@@ -58,6 +59,10 @@ const Navigate = () => {
   const [searchQueryTo, setSearchQueryTo] = useState('');
   const debouncedSearchFrom = useDebounce(searchQueryFrom, 150);
   const debouncedSearchTo = useDebounce(searchQueryTo, 150);
+  const [isFromPickerOpen, setIsFromPickerOpen] = useState(false);
+  const [isToPickerOpen, setIsToPickerOpen] = useState(false);
+  const [fromPickerPosition, setFromPickerPosition] = useState({ top: 0, left: 0, width: '100%' });
+  const [toPickerPosition, setToPickerPosition] = useState({ top: 0, left: 0, width: '100%' });
   const fromInputRef = useRef(null);
   const toInputRef = useRef(null);
   const fromSuggestionsRef = useRef(null);
@@ -845,22 +850,18 @@ const Navigate = () => {
                     ref={fromInputRef}
                     type="text"
                     value={fromLocation}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFromLocation(value);
-                      const filtered = LocationService.getLocationSuggestions(value);
-                      setSuggestions(prev => ({ ...prev, from: filtered }));
-                      setActiveInput('from');
-                    }}
-                    onFocus={(e) => {
-                      e.stopPropagation();
-                      const filtered = LocationService.getLocationSuggestions(fromLocation || '');
-                      setSuggestions(prev => ({ ...prev, from: filtered }));
-                      setActiveInput('from');
-                    }}
+                    readOnly
                     onClick={(e) => {
                       e.stopPropagation();
-                      setActiveInput('from');
+                      if (fromInputRef.current) {
+                        const rect = fromInputRef.current.getBoundingClientRect();
+                        setFromPickerPosition({
+                          top: rect.bottom + window.scrollY + 4,
+                          left: rect.left + window.scrollX,
+                          width: rect.width + 52
+                        });
+                      }
+                      setIsFromPickerOpen(true);
                     }}
                     placeholder={getText('enterStartingLocation')}
                     className="modern-input"
@@ -874,9 +875,42 @@ const Navigate = () => {
                       backgroundColor: 'var(--input-bg)',
                       color: 'var(--text-primary)',
                       fontFamily: 'var(--font-ui)',
-                      transition: 'border-color 0.2s ease'
+                      transition: 'border-color 0.2s ease',
+                      cursor: 'pointer'
                     }}
                   />
+                  
+                  {/* Browse All Locations Button */}
+                  <button
+                    onClick={() => {
+                      if (fromInputRef.current) {
+                        const rect = fromInputRef.current.getBoundingClientRect();
+                        setFromPickerPosition({
+                          top: rect.bottom + window.scrollY + 4,
+                          left: rect.left + window.scrollX,
+                          width: rect.width + 52
+                        });
+                      }
+                      setIsFromPickerOpen(true);
+                    }}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '44px',
+                      transition: 'all 0.3s',
+                      boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+                    }}
+                    title="Browse all Chennai locations"
+                  >
+                    <FontAwesomeIcon icon={faSearch} />
+                  </button>
                   
                   {isVoiceMode && (
                     <button
@@ -913,7 +947,8 @@ const Navigate = () => {
                   )}
                 </div>
                 
-                {suggestions.from.length > 0 && activeInput === 'from' && (
+                {/* Old suggestions removed - using LocationDropdownPicker instead */}
+                {false && suggestions.from.length > 0 && activeInput === 'from' && (
                   <div 
                     ref={fromSuggestionsRef}
                     onClick={(e) => e.stopPropagation()}
@@ -1036,23 +1071,19 @@ const Navigate = () => {
                     ref={toInputRef}
                     type="text"
                     value={toLocation}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setToLocation(value);
-                      const filtered = LocationService.getLocationSuggestions(value);
-                      setSuggestions(prev => ({ ...prev, to: filtered }));
-                      setActiveInput('to');
-                    }}
-                    onFocus={(e) => {
+                    readOnly
+                    onClick={(e) => {
                       e.stopPropagation();
-                      const filtered = LocationService.getLocationSuggestions(toLocation || '');
-                      setSuggestions(prev => ({ ...prev, to: filtered }));
-                      setActiveInput('to');
+                      if (toInputRef.current) {
+                        const rect = toInputRef.current.getBoundingClientRect();
+                        setToPickerPosition({
+                          top: rect.bottom + window.scrollY + 4,
+                          left: rect.left + window.scrollX,
+                          width: rect.width + 52
+                        });
+                      }
+                      setIsToPickerOpen(true);
                     }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveInput('to');
-                  }}
                   placeholder={getText('enterDestination')}
                   className="modern-input"
                   style={{
@@ -1065,9 +1096,42 @@ const Navigate = () => {
                     backgroundColor: 'var(--input-bg)',
                     color: 'var(--text-primary)',
                     fontFamily: 'var(--font-ui)',
-                    transition: 'border-color 0.2s ease'
+                    transition: 'border-color 0.2s ease',
+                    cursor: 'pointer'
                   }}
                 />
+                
+                  {/* Browse All Locations Button */}
+                  <button
+                    onClick={() => {
+                      if (toInputRef.current) {
+                        const rect = toInputRef.current.getBoundingClientRect();
+                        setToPickerPosition({
+                          top: rect.bottom + window.scrollY + 4,
+                          left: rect.left + window.scrollX,
+                          width: rect.width + 52
+                        });
+                      }
+                      setIsToPickerOpen(true);
+                    }}
+                    style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '44px',
+                      transition: 'all 0.3s',
+                      boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
+                    }}
+                    title="Browse all Chennai locations"
+                  >
+                    <FontAwesomeIcon icon={faSearch} />
+                  </button>
                 
                 {isVoiceMode && (
                   <button
@@ -1104,7 +1168,8 @@ const Navigate = () => {
                 )}
               </div>
                 
-                {suggestions.to.length > 0 && activeInput === 'to' && (
+                {/* Old suggestions removed - using LocationDropdownPicker instead */}
+                {false && suggestions.to.length > 0 && activeInput === 'to' && (
                   <div 
                     ref={toSuggestionsRef}
                     onClick={(e) => e.stopPropagation()}
@@ -1453,53 +1518,6 @@ const Navigate = () => {
                       </div>
                     )}
 
-                    {/* Route Steps Preview */}
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                        <FontAwesomeIcon icon={faRoute} style={{ ...getTextStyles('secondary'), fontSize: 14 }} />
-                        <span style={{ fontSize: 14, fontWeight: 600, ...getTextStyles('primary') }}>Route Details</span>
-                      </div>
-                      
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {route.steps?.slice(0, 3).map((step, stepIndex) => (
-                          <div key={stepIndex} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 12,
-                            padding: '8px 0',
-                            borderBottom: stepIndex < 2 ? `1px solid var(--border-color)` : 'none'
-                          }}>
-                            <div style={{
-                              width: 24,
-                              height: 24,
-                              borderRadius: '50%',
-                              background: stepIndex === 0 ? '#22c55e' : stepIndex === route.steps.length - 1 ? '#ef4444' : '#3b82f6',
-                              color: 'white',
-                              fontSize: 10,
-                              fontWeight: 600,
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
-                              {stepIndex + 1}
-                            </div>
-                            <span style={{ fontSize: 13, ...getTextStyles('primary') }}>{step}</span>
-                          </div>
-                        ))}
-                        
-                        {route.steps && route.steps.length > 3 && (
-                          <div style={{ 
-                            fontSize: 12, 
-                            ...getTextStyles('secondary'), 
-                            fontStyle: 'italic',
-                            paddingLeft: 36
-                          }}>
-                            +{route.steps.length - 3} more steps...
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
                     {/* Accessibility Features */}
                     {route.accessibilityFeatures && route.accessibilityFeatures.length > 0 && (
                       <div style={{ marginBottom: 16 }}>
@@ -1546,8 +1564,6 @@ const Navigate = () => {
                     }}>
                       <div style={{ display: 'flex', gap: 16, fontSize: 12, ...getTextStyles('secondary') }}>
                         <span>Carbon: {route.carbonFootprint}</span>
-                        <span>•</span>
-                        <span>{route.steps?.length || 0} steps</span>
                       </div>
                       
                       <div style={{ display: 'flex', gap: 8 }}>
@@ -1609,6 +1625,34 @@ const Navigate = () => {
         onStartNavigation={handleStartNavigationFromMap}
         onStopNavigation={handleStopNavigationFromMap}
         isNavigating={isNavigating}
+      />
+
+      {/* Dropdown Location Picker for From */}
+      <LocationDropdownPicker
+        isOpen={isFromPickerOpen}
+        onClose={() => setIsFromPickerOpen(false)}
+        onSelect={(location) => {
+          setFromLocation(location);
+          setIsFromPickerOpen(false);
+        }}
+        placeholder="Search Chennai locations..."
+        currentValue={fromLocation}
+        inputRef={fromInputRef}
+        position={fromPickerPosition}
+      />
+
+      {/* Dropdown Location Picker for To */}
+      <LocationDropdownPicker
+        isOpen={isToPickerOpen}
+        onClose={() => setIsToPickerOpen(false)}
+        onSelect={(location) => {
+          setToLocation(location);
+          setIsToPickerOpen(false);
+        }}
+        placeholder="Search Chennai locations..."
+        currentValue={toLocation}
+        inputRef={toInputRef}
+        position={toPickerPosition}
       />
     </div>
   );
