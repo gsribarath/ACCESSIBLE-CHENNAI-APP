@@ -1,15 +1,13 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faRobot, faHome, faMapMarkedAlt, faExclamationTriangle, faUsers, faCog } from '@fortawesome/free-solid-svg-icons';
+import { faHome, faMapMarkedAlt, faExclamationTriangle, faUsers, faCog } from '@fortawesome/free-solid-svg-icons';
 import { usePreferences } from '../context/PreferencesContext';
-import AIAssistant from './AIAssistant';
 
 function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { getText, getButtonStyles, getTextStyles } = usePreferences();
-  const [showAIChat, setShowAIChat] = useState(false);
 
   const navItems = [
     { label: getText('home'), path: '/', icon: faHome },
@@ -74,44 +72,7 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
             Accessible Chennai
           </h1>
         </div>
-        
-        {user && (
-          <button 
-            onClick={() => setShowAIChat(true)}
-            style={{ 
-              background: 'linear-gradient(135deg, #1976d2 0%, #42a5f5 100%)',
-              border: 'none',
-              padding: '10px 16px', 
-              borderRadius: 12, 
-              fontSize: '16px',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              color: 'white',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: '0 2px 8px rgba(25, 118, 210, 0.3)',
-              fontWeight: '500'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(25, 118, 210, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(25, 118, 210, 0.3)';
-            }}
-            title="Chat with AI Assistant"
-          >
-            <FontAwesomeIcon icon={faRobot} />
-            <span>AI Help</span>
-          </button>
-        )}
       </header>
-      
-      {/* AI Assistant Chat */}
-      {user && <AIAssistant isOpen={showAIChat} onClose={() => setShowAIChat(false)} />}
 
       {/* Bottom Navigation */}
       {showBottomNav && user && (
