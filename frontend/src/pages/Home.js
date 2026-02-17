@@ -365,169 +365,216 @@ function Home() {
           </div>
         </section>
 
-        {/* Quick Actions Grid */}
+        {/* Quick Access */}
         <section style={{ marginBottom: '32px' }}>
-          <h3 style={{ 
-            marginBottom: '24px', 
-            fontSize: 'var(--font-size-2xl)', 
+          <h3 style={{
+            fontSize: 'var(--font-size-xl)',
             fontWeight: 'var(--font-weight-bold)',
             fontFamily: 'var(--font-heading)',
-            letterSpacing: 'var(--letter-spacing-tight)',
-            ...getTextStyles('primary'),
-            textAlign: 'center'
+            marginBottom: '20px',
+            ...getTextStyles('primary')
           }}>
-            Essential Services
+            Quick Access
           </h3>
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
-            gap: '20px' 
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '16px'
           }}>
-            {quickActions.map((action, index) => {
-              const actionData = [
-                { 
-                  color: '#3B82F6',
-                  bgColor: 'rgba(59, 130, 246, 0.1)',
-                  borderColor: 'rgba(59, 130, 246, 0.2)',
-                  icon: faCompass,
-                  title: 'Smart Navigation',
-                  description: 'AI-powered accessible route planning'
-                },
-                { 
-                  color: '#10B981',
-                  bgColor: 'rgba(16, 185, 129, 0.1)',
-                  borderColor: 'rgba(16, 185, 129, 0.2)',
-                  icon: faUsers,
-                  title: 'Connect & Share',
-                  description: 'Join our inclusive community'
-                },
-                { 
-                  color: '#8B5CF6',
-                  bgColor: 'rgba(139, 92, 246, 0.1)',
-                  borderColor: 'rgba(139, 92, 246, 0.2)',
-                  icon: faCog,
-                  title: 'Accessibility Settings',
-                  description: 'Customize your experience'
-                }
-              ];
-              const currentAction = actionData[index] || actionData[0];
-              
-              return (
-                <div
-                  key={action.title}
-                  onClick={() => navigate(action.path)}
-                  style={{
-                    ...getCardStyles(),
-                    padding: '24px',
-                    borderRadius: '16px',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    background: preferences.theme === 'dark' ? 
-                      'rgba(30, 41, 59, 0.8)' : 
-                      'rgba(255, 255, 255, 0.9)',
-                    border: `1px solid ${currentAction.borderColor}`,
-                    boxShadow: preferences.theme === 'dark' ? 
-                      '0 4px 16px rgba(0, 0, 0, 0.3)' : 
-                      '0 4px 16px rgba(0, 0, 0, 0.1)',
-                    backdropFilter: 'blur(10px)'
-                  }}
-                  onMouseOver={e => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = preferences.theme === 'dark' ? 
-                      '0 8px 32px rgba(0, 0, 0, 0.4)' : 
-                      '0 8px 32px rgba(0, 0, 0, 0.15)';
-                    e.currentTarget.style.borderColor = currentAction.color;
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = preferences.theme === 'dark' ? 
-                      '0 4px 16px rgba(0, 0, 0, 0.3)' : 
-                      '0 4px 16px rgba(0, 0, 0, 0.1)';
-                    e.currentTarget.style.borderColor = currentAction.borderColor;
-                  }}
-                >
-                  {/* Professional accent line */}
+            {[
+              { 
+                label: 'Nearby Metro Stations', 
+                path: '/navigate',
+                icon: faCompass,
+                color: '#3B82F6'
+              },
+              { 
+                label: 'Emergency Contacts', 
+                path: '/alerts',
+                icon: faPhoneAlt,
+                color: '#EF4444'
+              },
+              { 
+                label: 'Real-time Updates', 
+                path: '/alerts',
+                icon: faInfoCircle,
+                color: '#10B981'
+              }
+            ].map((link, idx) => (
+              <div
+                key={idx}
+                onClick={() => navigate(link.path)}
+                style={{
+                  ...getCardStyles(),
+                  padding: '16px 20px',
+                  borderRadius: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  borderLeft: `4px solid ${link.color}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  background: preferences.theme === 'dark' ? 
+                    'rgba(30,41,59,0.8)' : 
+                    'rgba(255,255,255,0.9)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateX(4px)';
+                  e.currentTarget.style.boxShadow = `0 4px 16px ${link.color}30`;
+              }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateX(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}
+              >
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  background: `${link.color}20`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: link.color,
+                  fontSize: '18px',
+                  flexShrink: 0
+                }}>
+                  <FontAwesomeIcon icon={link.icon} />
+                </div>
+                <span style={{
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '600',
+                  ...getTextStyles('primary')
+                }}>
+                  {link.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Statistics Section */}
+        <section style={{ marginBottom: '32px' }}>
+          <div style={{
+            ...getCardStyles(),
+            padding: '32px',
+            borderRadius: '16px',
+            background: `linear-gradient(135deg, 
+              ${preferences.theme === 'dark' ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)'} 0%, 
+              ${preferences.theme === 'dark' ? 'rgba(16,185,129,0.1)' : 'rgba(16,185,129,0.05)'} 100%)`,
+            border: `1px solid ${preferences.theme === 'dark' ? 'rgba(59,130,246,0.2)' : 'rgba(59,130,246,0.15)'}`,
+            boxShadow: preferences.theme === 'dark' ? 
+              '0 8px 32px rgba(0,0,0,0.3)' : 
+              '0 8px 32px rgba(59,130,246,0.1)'
+          }}>
+            <h3 style={{
+              fontSize: 'var(--font-size-xl)',
+              fontWeight: 'var(--font-weight-bold)',
+              fontFamily: 'var(--font-heading)',
+              marginBottom: '24px',
+              textAlign: 'center',
+              ...getTextStyles('primary')
+            }}>
+              Your Impact in Numbers
+            </h3>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+              gap: '24px'
+            }}>
+              {[
+                { number: '42', label: 'Routes Planned', color: '#3B82F6', icon: faRoute },
+                { number: '18', label: 'Alerts Received', color: '#F59E0B', icon: faExclamationTriangle },
+                { number: '12', label: 'Community Posts', color: '#10B981', icon: faUsers },
+                { number: '5', label: 'Places Saved', color: '#8B5CF6', icon: faCompass }
+              ].map((stat, idx) => (
+                <div key={idx} style={{
+                  textAlign: 'center',
+                  padding: '20px',
+                  borderRadius: '12px',
+                  background: preferences.theme === 'dark' ? 
+                    'rgba(255,255,255,0.05)' : 
+                    'rgba(255,255,255,0.8)',
+                  border: `1px solid ${preferences.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}`,
+                  transition: 'all 0.3s ease',
+                  cursor: 'default'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)';
+                  e.currentTarget.style.boxShadow = `0 8px 24px ${stat.color}40`;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = 'none';
+                }}>
                   <div style={{
-                    position: 'absolute',
-                    top: '0',
-                    left: '0',
-                    right: '0',
-                    height: '3px',
-                    background: `linear-gradient(90deg, ${currentAction.color} 0%, transparent 100%)`,
-                    borderRadius: '16px 16px 0 0'
-                  }} />
-                  
-                  <div style={{ position: 'relative', zIndex: 2 }}>
-                    <div style={{ 
-                      fontSize: '24px', 
-                      marginBottom: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '56px',
-                      height: '56px',
-                      background: currentAction.bgColor,
-                      borderRadius: '14px',
-                      border: `2px solid ${currentAction.borderColor}`,
-                      transition: 'all 0.3s ease',
-                      color: currentAction.color
-                    }}>
-                      <FontAwesomeIcon icon={currentAction.icon} />
-                    </div>
-                    
-                    <h4 style={{ 
-                      margin: '0 0 8px 0', 
-                      fontSize: 'var(--font-size-lg)', 
-                      fontWeight: 'var(--font-weight-semibold)',
-                      fontFamily: 'var(--font-heading)',
-                      letterSpacing: 'var(--letter-spacing-tight)',
-                      color: currentAction.color,
-                      lineHeight: 'var(--line-height-tight)'
-                    }}>
-                      {currentAction.title}
-                    </h4>
-                    
-                    <p style={{ 
-                      margin: 0, 
-                      fontSize: 'var(--font-size-sm)',
-                      fontFamily: 'var(--font-secondary)',
-                      lineHeight: 'var(--line-height-normal)',
-                      ...getTextStyles('secondary')
-                    }}>
-                      {currentAction.description}
-                    </p>
-                    
-                    {/* Professional hover indicator */}
-                    <div style={{
-                      marginTop: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      opacity: 0.7,
-                      transition: 'opacity 0.3s ease'
-                    }}>
-                      <span style={{
-                        fontSize: 'var(--font-size-xs)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        fontFamily: 'var(--font-ui)',
-                        letterSpacing: 'var(--letter-spacing-wide)',
-                        color: currentAction.color
-                      }}>
-                        Learn more
-                      </span>
-                      <span style={{
-                        fontSize: '12px',
-                        color: currentAction.color
-                      }}>
-                        →
-                      </span>
-                    </div>
+                    width: '48px',
+                    height: '48px',
+                    margin: '0 auto 12px',
+                    borderRadius: '50%',
+                    background: `${stat.color}20`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: stat.color,
+                    fontSize: '20px'
+                  }}>
+                    <FontAwesomeIcon icon={stat.icon} />
+                  </div>
+                  <div style={{
+                    fontSize: '32px',
+                    fontWeight: '700',
+                    color: stat.color,
+                    marginBottom: '4px',
+                    fontFamily: 'var(--font-heading)'
+                  }}>
+                    {stat.number}
+                  </div>
+                  <div style={{
+                    fontSize: 'var(--font-size-sm)',
+                    ...getTextStyles('secondary'),
+                    fontWeight: '500'
+                  }}>
+                    {stat.label}
                   </div>
                 </div>
-              );
-            })}
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Tips Section */}
+        <section>
+          <div style={{
+            ...getCardStyles(),
+            padding: '24px',
+            borderRadius: '16px',
+            background: preferences.theme === 'dark' ? 
+              'linear-gradient(135deg, rgba(139,92,246,0.1) 0%, rgba(236,72,153,0.1) 100%)' : 
+              'linear-gradient(135deg, rgba(139,92,246,0.05) 0%, rgba(236,72,153,0.05) 100%)',
+            border: `1px solid ${preferences.theme === 'dark' ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.15)'}`
+          }}>
+            <h3 style={{
+              fontSize: 'var(--font-size-lg)',
+              fontWeight: 'var(--font-weight-semibold)',
+              fontFamily: 'var(--font-heading)',
+              marginBottom: '16px',
+              ...getTextStyles('primary'),
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <span style={{ fontSize: '20px' }}>💡</span>
+              Pro Tip of the Day
+            </h3>
+            <p style={{
+              fontSize: 'var(--font-size-base)',
+              lineHeight: 'var(--line-height-relaxed)',
+              ...getTextStyles('secondary'),
+              margin: 0
+            }}>
+              Use voice mode for hands-free navigation! Enable it in Settings → Accessibility Mode → Voice Control for a fully guided experience.
+            </p>
           </div>
         </section>
 
