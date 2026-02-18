@@ -72,22 +72,23 @@ function Login() {
         body: JSON.stringify({ email, password, preferences: prefs }),
       });
       
-      // Check if backend is accessible
-      if (!res.ok && res.status === 500) {
-        const text = await res.text();
-        console.error('Server error response:', text);
-        if (text.includes('Proxy error')) {
-          setError('Backend server is not running. Please start the backend server on port 5000.');
-          return;
-        }
-      }
+      // Read response body once as text
+      const text = await res.text();
       
       // Try to parse as JSON
       let data;
       try {
-        data = await res.json();
+        data = JSON.parse(text);
       } catch (jsonErr) {
         console.error('Failed to parse JSON:', jsonErr);
+        console.error('Response text:', text);
+        
+        // Check if backend is not accessible
+        if (text.includes('Proxy error')) {
+          setError('Backend server is not running. Please start the backend server on port 5000.');
+          return;
+        }
+        
         setError('Server returned an invalid response. Please ensure the backend is running properly.');
         return;
       }
