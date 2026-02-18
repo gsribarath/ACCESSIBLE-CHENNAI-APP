@@ -24,7 +24,7 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
       {/* Top Header */}
       <header style={{ 
         background: 'var(--nav-bg)', 
-        padding: '12px 20px', 
+        padding: window.innerWidth <= 768 ? '10px 16px' : '12px 20px', 
         boxShadow: 'var(--shadow)',
         display: 'flex',
         justifyContent: 'space-between',
@@ -36,19 +36,26 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
       }}>
         <div 
           onClick={() => navigate('/')}
-          style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: window.innerWidth <= 768 ? 10 : 12, 
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent'
+          }}
         >
           {/* Accessibility Logo */}
           <div style={{
-            width: 40,
-            height: 40,
+            width: window.innerWidth <= 768 ? 36 : 40,
+            height: window.innerWidth <= 768 ? 36 : 40,
             borderRadius: '50%',
             background: 'var(--accent-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            flexShrink: 0
           }}>
             <img 
               src="/accessibility-logo.png" 
@@ -63,13 +70,16 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
           </div>
           <h1 style={{ 
             margin: 0, 
-            fontSize: 'var(--font-size-xl)', 
+            fontSize: window.innerWidth <= 768 ? 'var(--font-size-lg)' : 'var(--font-size-xl)', 
             fontWeight: 'var(--font-weight-semibold)',
             fontFamily: 'var(--font-heading)',
             letterSpacing: 'var(--letter-spacing-tight)',
-            ...getTextStyles('primary')
+            ...getTextStyles('primary'),
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis'
           }}>
-            Accessible Chennai
+            {window.innerWidth <= 480 ? 'AC' : 'Accessible Chennai'}
           </h1>
         </div>
       </header>
@@ -83,11 +93,12 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
           right: 0,
           background: 'var(--nav-bg)',
           borderTop: '1px solid var(--border-color)',
-          padding: '8px 0',
+          padding: window.innerWidth <= 768 ? '6px 0' : '8px 0',
           display: 'flex',
           justifyContent: 'space-around',
           boxShadow: 'var(--shadow)',
-          zIndex: 1000
+          zIndex: 1000,
+          paddingBottom: 'env(safe-area-inset-bottom)'
         }}>
           {navItems.map(item => {
             const active = isActive(item.path);
@@ -98,7 +109,7 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
                 style={{
                   background: 'none',
                   border: 'none',
-                  padding: '8px 16px',
+                  padding: window.innerWidth <= 768 ? '6px 12px' : '8px 16px',
                   cursor: 'pointer',
                   display: 'flex',
                   flexDirection: 'column',
@@ -111,29 +122,43 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
                   letterSpacing: 'var(--letter-spacing-wide)',
                   transition: 'all 0.2s',
                   borderRadius: 8,
-                  minWidth: 60
+                  minWidth: window.innerWidth <= 768 ? 50 : 60,
+                  flex: 1,
+                  maxWidth: window.innerWidth <= 768 ? 80 : 100,
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
                 }}
                 onMouseOver={e => {
-                  if (!active) {
+                  if (!active && window.innerWidth > 768) {
                     e.target.style.background = 'var(--border-color)';
                     e.target.style.color = 'var(--accent-color)';
                   }
                 }}
                 onMouseOut={e => {
-                  if (!active) {
+                  if (!active && window.innerWidth > 768) {
                     e.target.style.background = 'none';
                     e.target.style.color = 'var(--text-secondary)';
                   }
                 }}
               >
-                <FontAwesomeIcon icon={item.icon} style={{ fontSize: 20, marginBottom: 2 }} />
+                <FontAwesomeIcon 
+                  icon={item.icon} 
+                  style={{ 
+                    fontSize: window.innerWidth <= 768 ? 18 : 20, 
+                    marginBottom: 2 
+                  }} 
+                />
                 <span style={{ 
                   fontWeight: active ? 'var(--font-weight-semibold)' : 'var(--font-weight-normal)',
-                  fontSize: 'var(--font-size-sm)',
+                  fontSize: window.innerWidth <= 768 ? '0.6875rem' : 'var(--font-size-sm)',
                   fontFamily: 'var(--font-ui)',
                   letterSpacing: 'var(--letter-spacing-wide)',
                   transform: active ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  maxWidth: '100%'
                 }}>
                   {item.label}
                 </span>
