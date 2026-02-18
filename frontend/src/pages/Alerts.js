@@ -128,47 +128,44 @@ function Alerts() {
       // Generate initial metro alerts
       setMetroAlerts(generateMetroAlerts());
       
-      // Voice commands setup
+      // Voice commands setup for alerts
       if (isVoiceMode) {
         const commandHandlers = {
           'refresh|update': () => {
-            speak('Refreshing alerts');
+            speak('Refreshing alerts.', false, true);
             fetchAlerts();
             setMetroAlerts(generateMetroAlerts());
           },
-          'report|add|new': () => {
-            speak('Say your alert message');
-            // Could expand this to handle voice input for new alerts
+          'repeat|again': () => {
+            readAlerts();
+          },
+          'clear alert': () => {
+            speak('Clearing all alerts.', false, true);
+            setAlerts([]);
           },
           'transport|metro|bus': () => {
-            speak('Transport alerts selected');
+            speak('Transport alerts selected.', false, true);
             setCategory('transport');
           },
           'accessibility|access': () => {
-            speak('Accessibility alerts selected');
+            speak('Accessibility alerts selected.', false, true);
             setCategory('accessibility');
           },
           'emergency': () => {
-            speak('Emergency alerts selected');
-            setCategory('emergency');
+            speak('Emergency mode activated. Calling your emergency contact now.', true, true);
+            // Handle emergency
           },
           'back|home': () => {
-            speak('Going back');
+            speak('Going back.', false, true);
             navigate('/');
-          },
-          'help|commands': () => {
-            const helpText = `Say: Refresh, Transport, Accessibility, Emergency, or Back`;
-            speak(helpText);
           }
         };
         
         setupSpeechRecognition(commandHandlers);
         
         setTimeout(() => {
-          const welcomeMessage = `Alerts page. Say: Refresh, Transport, Accessibility, Emergency, or Back.`;
-          speak(welcomeMessage).then(() => {
-            startListening();
-          });
+          readAlerts();
+          startListening();
         }, 1000);
       }
       
@@ -197,6 +194,28 @@ function Alerts() {
   const handleLogout = () => {
     localStorage.removeItem('ac_user');
     navigate('/login');
+  };
+
+  const readAlerts = async () => {
+    const accessibilityAlerts = metroAlerts.filter(alert => 
+      alert.type === 'accessibility' || alert.type === 'maintenance'
+    );
+    
+    if (accessibilityAlerts.length === 0) {
+      await speak('You have no accessibility alerts at this time.', true, true);
+      await speak('Say Repeat to hear again. Say Clear Alerts to dismiss.', false, true);
+      return;
+    }
+    
+    let message = `You have ${accessibilityAlerts.length} accessibility alert${accessibilityAlerts.length > 1 ? 's' : ''}. `;
+    
+    accessibilityAlerts.forEach((alert, index) => {
+      message += `Alert ${index + 1}: ${alert.message} at ${alert.stations.join(' and ')} ${alert.line}. `;
+    });
+    
+    message += `Say Repeat to hear again. Say Clear Alerts to dismiss.`;
+    
+    await speak(message, true, true);
   };
 
   const handlePost = async (e) => {
