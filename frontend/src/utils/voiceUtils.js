@@ -5,23 +5,36 @@ import { useCallback, useRef, useState, useEffect } from 'react';
  * Voice Mode Introduction Message
  * Spoken automatically when Voice Mode is activated
  */
-export const VOICE_MODE_INTRO = `Welcome to Accessible Chennai Voice Assistant. 
-You are now in Voice Mode. 
-This app helps you navigate public transport in Chennai with full accessibility support. 
-You can control the entire app using only your voice. 
+export const VOICE_MODE_INTRO = `Welcome to Accessible Chennai.
+You can say Navigate, Alerts, Community, or Settings.
+What would you like to do?`;
 
-Here are the basic commands you can say:
+/**
+ * Emergency activation message
+ */
+export const VOICE_EMERGENCY = `Emergency mode activated.
+Calling your emergency contact now.`;
 
-Say "Home" to go to the home page.
-Say "Plan Route" to start planning your journey.
-Say "Nearby Bus Stop" to find bus stops near you.
-Say "Accessible Routes" to get wheelchair accessible routes.
-Say "Help" to connect with volunteers or transit staff.
-Say "Repeat Instructions" to hear this message again.
-Say "Exit Voice Mode" to switch to normal mode.
+/**
+ * Voice speed settings
+ */
+export const VOICE_SPEEDS = {
+  slow: 0.75,
+  normal: 0.9,
+  fast: 1.1
+};
 
-I am always listening and ready to help you. 
-Please say your command now.`;
+/**
+ * Get voice speed from settings
+ */
+export const getVoiceSpeed = () => {
+  try {
+    const prefs = JSON.parse(localStorage.getItem('ac_prefs') || '{}');
+    return VOICE_SPEEDS[prefs.voiceSpeed || 'normal'];
+  } catch {
+    return VOICE_SPEEDS.normal;
+  }
+};
 
 export const useVoiceInterface = () => {
   const [isListening, setIsListening] = useState(false);
@@ -31,10 +44,12 @@ export const useVoiceInterface = () => {
   const recognitionRef = useRef(null);
   const speakTimeoutRef = useRef(null);
   const lastCommandTime = useRef(0);
+  const isStartingRef = useRef(false); // Flag to prevent multiple simultaneous starts
+  const shouldRestartRef = useRef(true); // Flag to control auto-restart
   const commandDebounceMs = 300; // Debounce commands for smooth operation
 
   // Enhanced Speech synthesis with accessibility-optimized settings - optimized for performance
-  const speak = useCallback((text, priority = false) => {
+  const speak = useCallback((text, priority = false, slowSpeed = false) => {
     if (!('speechSynthesis' in window)) return Promise.resolve();
 
     return new Promise((resolve) => {
@@ -48,22 +63,50 @@ export const useVoiceInterface = () => {
           window.speechSynthesis.cancel();
         }
         
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-IN'; // Indian English for Chennai context
-        utterance.rate = 0.9; // Slightly faster for responsiveness
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
+        // Split text into sentences for better pacing
+        const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+        let currentIndex = 0;
         
-        utterance.onend = () => resolve();
-        utterance.onerror = () => resolve();
+        const speakNextSentence = () => {
+          if (currentIndex >= sentences.length) {
+            resolve();
+            return;
+          }
+          
+          const sentence = sentences[currentIndex].trim();
+          if (!sentence) {
+            currentIndex++;
+            speakNextSentence();
+            return;
+          }
+          
+          const utterance = new SpeechSynthesisUtterance(sentence);
+          utterance.lang = 'en-IN'; // Indian English for Chennai context
+          utterance.rate = slowSpeed ? 0.7 : getVoiceSpeed(); // Slower for important info
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+          
+          utterance.onend = () => {
+            currentIndex++;
+            // Short pause between sentences
+            setTimeout(speakNextSentence, 300);
+          };
+          
+          utterance.onerror = () => {
+            currentIndex++;
+            speakNextSentence();
+          };
+          
+          window.speechSynthesis.speak(utterance);
+        };
         
-        window.speechSynthesis.speak(utterance);
+        speakNextSentence();
         
         // Optimized timeout
         speakTimeoutRef.current = setTimeout(() => {
           window.speechSynthesis.cancel();
           resolve();
-        }, 20000);
+        }, 30000); // Longer timeout for complex messages
       });
     });
   }, []);
@@ -85,6 +128,7 @@ export const useVoiceInterface = () => {
 
     recognitionRef.current.onstart = () => {
       setIsListening(true);
+      isStartingRef.current = false; // Reset flag once successfully started
       setVoiceFeedback('Listening for your command...');
     };
 
@@ -128,63 +172,68 @@ export const useVoiceInterface = () => {
     recognitionRef.current.onspeechend = () => {
       // Start a timer to reassure user after prolonged silence
       const timer = setTimeout(() => {
-        speak('I am still listening. Please say your command.');
-      }, 10000); // 10 seconds of silence
+        speak('I am still listening. Please say your command.', false, true);
+      }, 8000); // 8 seconds of silence
       setSilenceTimer(timer);
     };
 
     recognitionRef.current.onerror = (event) => {
       console.error('Speech recognition error:', event.error);
+      setIsListening(false);
+      isStartingRef.current = false;
       
       if (event.error === 'no-speech') {
-        speak('I did not hear anything. Please say your command.');
-        setTimeout(() => {
-          if (recognitionRef.current) {
-            startListening();
-          }
-        }, 2000);
+        speak('I did not hear anything. Please say your command.', true, true);
+        // Don't auto-restart, let onend handle it
       } else if (event.error === 'audio-capture') {
-        speak('No microphone detected. Please check your microphone.');
-        setIsListening(false);
+        speak('No microphone detected. Please check your microphone.', true, true);
+        shouldRestartRef.current = false;
       } else if (event.error === 'not-allowed') {
-        speak('Microphone access denied. Please allow microphone access.');
-        setIsListening(false);
+        speak('Microphone access denied. Please allow microphone access.', true, true);
+        shouldRestartRef.current = false;
+      } else if (event.error === 'aborted') {
+        // Aborted error is normal when stopping/restarting, just log it
+        console.log('Speech recognition aborted - this is normal during restart');
       } else {
-        speak('I did not understand that. Please repeat your command slowly.');
-        setTimeout(() => {
-          if (recognitionRef.current) {
-            startListening();
-          }
-        }, 2000);
+        speak('Sorry, I did not understand. Please try again.', true, true);
       }
     };
 
     recognitionRef.current.onend = () => {
       setIsListening(false);
+      isStartingRef.current = false;
+      
       // Auto-restart listening to maintain continuous voice mode
-      setTimeout(() => {
-        if (recognitionRef.current) {
-          try {
-            startListening();
-          } catch (error) {
-            console.error('Failed to restart listening:', error);
+      if (shouldRestartRef.current && recognitionRef.current) {
+        setTimeout(() => {
+          if (recognitionRef.current && shouldRestartRef.current && !isStartingRef.current) {
+            try {
+              startListening();
+            } catch (error) {
+              console.error('Failed to restart listening:', error);
+            }
           }
-        }
-      }, 500);
+        }, 500);
+      }
     };
   }, [speak, silenceTimer]);
 
   const startListening = useCallback(() => {
-    if (recognitionRef.current) {
+    if (recognitionRef.current && !isStartingRef.current) {
       try {
+        isStartingRef.current = true;
+        shouldRestartRef.current = true;
         recognitionRef.current.start();
+        console.log('Speech recognition started successfully');
       } catch (error) {
         console.error('Error starting speech recognition:', error);
+        isStartingRef.current = false;
       }
     }
   }, []);
 
   const stopListening = useCallback(() => {
+    shouldRestartRef.current = false;
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -193,6 +242,7 @@ export const useVoiceInterface = () => {
       }
     }
     setIsListening(false);
+    isStartingRef.current = false;
   }, []);
 
   // Cleanup
@@ -221,59 +271,198 @@ export const useVoiceInterface = () => {
 
 /**
  * Process voice command and determine action
- * Handles natural language variations
+ * Handles natural language variations for accessibility-first interaction
  */
 export const processVoiceCommand = (command) => {
   const cmd = command.toLowerCase().trim();
   
-  // Navigation commands
-  if (cmd.includes('home') || cmd.includes('go home') || cmd.includes('take me home')) {
-    return { action: 'navigate', destination: '/home' };
+  // EMERGENCY COMMANDS - Highest priority
+  if (cmd.includes('emergency') || cmd.includes('help me') || cmd.includes('urgent')) {
+    return { action: 'emergency' };
   }
   
-  if (cmd.includes('plan route') || cmd.includes('route planning') || cmd.includes('plan a route') || 
-      cmd.includes('start route') || cmd.includes('navigate') || cmd.includes('navigation')) {
+  // Navigation section commands  
+  if (cmd.includes('navigate') || cmd.includes('navigation')) {
     return { action: 'navigate', destination: '/navigate' };
   }
   
-  if (cmd.includes('nearby bus') || cmd.includes('bus stop') || cmd.includes('nearest bus') ||
-      cmd.includes('find bus stop')) {
-    return { action: 'nearbyBusStop' };
+  if (cmd.includes('home')) {
+    return { action: 'navigate', destination: '/' };
   }
   
-  if (cmd.includes('accessible route') || cmd.includes('wheelchair route') || 
-      cmd.includes('accessible path') || cmd.includes('wheelchair accessible')) {
-    return { action: 'accessibleRoute' };
+  if (cmd.includes('alert')) {
+    return { action: 'navigate', destination: '/alerts' };
   }
   
-  if (cmd.includes('help') || cmd.includes('assistance') || cmd.includes('support') ||
-      cmd.includes('connect volunteer') || cmd.includes('need help')) {
+  if (cmd.includes('community')) {
     return { action: 'navigate', destination: '/community' };
   }
   
-  if (cmd.includes('repeat') || cmd.includes('say again') || cmd.includes('repeat instruction')) {
-    return { action: 'repeatIntro' };
-  }
-  
-  if (cmd.includes('exit voice') || cmd.includes('normal mode') || cmd.includes('turn off voice') ||
-      cmd.includes('disable voice')) {
-    return { action: 'exitVoiceMode' };
-  }
-  
-  if (cmd.includes('community') || cmd.includes('connect') || cmd.includes('share')) {
-    return { action: 'navigate', destination: '/community' };
-  }
-  
-  if (cmd.includes('settings') || cmd.includes('preferences') || cmd.includes('options')) {
+  if (cmd.includes('setting')) {
     return { action: 'navigate', destination: '/settings' };
   }
   
-  if (cmd.includes('alerts') || cmd.includes('notifications')) {
-    return { action: 'navigate', destination: '/alerts' };
+  // Navigation flow commands
+  if (cmd.includes('find accessible route') || cmd.includes('accessible route')) {
+    return { action: 'findAccessibleRoutes' };
+  }
+  
+  if (cmd.includes('route 1') || cmd.includes('route one') || 
+      cmd.includes('first route') || cmd.includes('option 1')) {
+    return { action: 'selectRoute', routeIndex: 0 };
+  }
+  
+  if (cmd.includes('route 2') || cmd.includes('route two') || 
+      cmd.includes('second route') || cmd.includes('option 2')) {
+    return { action: 'selectRoute', routeIndex: 1 };
+  }
+  
+  if (cmd.includes('route 3') || cmd.includes('route three') || 
+      cmd.includes('third route') || cmd.includes('option 3')) {
+    return { action: 'selectRoute', routeIndex: 2 };
+  }
+  
+  // Confirmation commands
+  if (cmd.includes('confirm') || cmd.includes('yes') || cmd.includes('correct') || 
+      cmd.includes('okay') || cmd.includes('ok') || cmd.includes('sure')) {
+    return { action: 'confirm', value: true };
+  }
+  
+  if (cmd.includes('no') || cmd.includes('cancel') || cmd.includes('wrong') || 
+      cmd.includes('incorrect')) {
+    return { action: 'confirm', value: false };
+  }
+  
+  // Repeat/Help commands
+  if (cmd.includes('repeat') || cmd.includes('say again') || cmd.includes('again')) {
+    return { action: 'repeat' };
+  }
+  
+  // Settings commands
+  if (cmd.includes('change voice speed') || cmd.includes('voice speed')) {
+    return { action: 'changeVoiceSpeed' };
+  }
+  
+  if (cmd.includes('slow')) {
+    return { action: 'setSpeed', speed: 'slow' };
+  }
+  
+  if (cmd.includes('normal')) {
+    return { action: 'setSpeed', speed: 'normal' };
+  }
+  
+  if (cmd.includes('fast')) {
+    return { action: 'setSpeed', speed: 'fast' };
+  }
+  
+  if (cmd.includes('change language')) {
+    return { action: 'changeLanguage' };
+  }
+  
+  if (cmd.includes('emergency contact')) {
+    return { action: 'emergencyContacts' };
+  }
+  
+  // Community commands
+  if (cmd.includes('post update')) {
+    return { action: 'postUpdate' };
+  }
+  
+  if (cmd.includes('hear nearby update') || cmd.includes('nearby update')) {
+    return { action: 'nearbyUpdates' };
+  }
+  
+  if (cmd.includes('ask for help')) {
+    return { action: 'askHelp' };
+  }
+  
+  if (cmd.includes('next')) {
+    return { action: 'next' };
+  }
+  
+  // Alerts commands
+  if (cmd.includes('clear alert')) {
+    return { action: 'clearAlerts' };
   }
   
   // Unknown command
   return { action: 'unknown', command: cmd };
+};
+
+/**
+ * Voice Assistant State Manager
+ * Manages conversation state for voice-guided interactions
+ */
+export class VoiceAssistantState {
+  constructor() {
+    this.currentFlow = null;
+    this.currentStep = 0;
+    this.data = {};
+    this.lastMessage = '';
+  }
+  
+  startFlow(flowName) {
+    this.currentFlow = flowName;
+    this.currentStep = 0;
+    this.data = {};
+  }
+  
+  nextStep() {
+    this.currentStep++;
+  }
+  
+  setData(key, value) {
+    this.data[key] = value;
+  }
+  
+  getData(key) {
+    return this.data[key];
+  }
+  
+  reset() {
+    this.currentFlow = null;
+    this.currentStep = 0;
+    this.data = {};
+  }
+  
+  setLastMessage(message) {
+    this.lastMessage = message;
+  }
+  
+  getLastMessage() {
+    return this.lastMessage;
+  }
+}
+
+/**
+ * Navigate flow messages
+ */
+export const getNavigateFlowMessage = (step, data = {}) => {
+  const messages = {
+    START_LOCATION: "Please tell me your starting location.",
+    CONFIRM_START: `Your starting location is ${data.startLocation}. Is this correct? Please say Yes or No.`,
+    START_CONFIRMED: "Starting location confirmed.",
+    DESTINATION: "Please tell me your destination.",
+    CONFIRM_DESTINATION: `Your destination is ${data.destination}. Is this correct? Please say Yes or No.`,
+    DESTINATION_CONFIRMED: "Destination confirmed.",
+    FIND_ROUTES_PROMPT: "Please say Find Accessible Routes to check the best accessible travel options.",
+    FINDING_ROUTES: "Finding accessible routes now. Please wait.",
+    NO_ROUTES: "Sorry, no accessible routes found for this journey. Please try different locations.",
+    ROUTES_FOUND: (routes) => {
+      let message = `I found ${routes.length} accessible route${routes.length > 1 ? 's' : ''}. `;
+      routes.forEach((route, idx) => {
+        message += `Route ${idx + 1}: ${route.type} route. ${route.accessibility} accessibility. Estimated travel time ${route.estimatedTime} minutes. `;
+      });
+      message += `Please say Route 1, Route 2, or Route 3 to select.`;
+      return message;
+    },
+    ROUTE_SELECTED: (routeNum) => `You selected Route ${routeNum}.`,
+    CONFIRM_BOOKING: `Do you want to confirm this route? Please say Confirm or Cancel.`,
+    BOOKING_CONFIRMED: "Your accessible route has been confirmed. Navigation guidance will now begin. I will guide you step by step.",
+    BOOKING_CANCELLED: "Route booking cancelled. Returning to navigation menu."
+  };
+  
+  return messages[step] || "";
 };
 
 // Voice command keywords for different languages - SIMPLIFIED
