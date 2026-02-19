@@ -182,10 +182,17 @@ function Alerts() {
     try {
       setLoading(true);
       const res = await fetch('/api/alerts');
+      if (!res.ok) {
+        console.error('Failed to fetch alerts:', res.status);
+        setAlerts([]);
+        return;
+      }
       const data = await res.json();
-      setAlerts(data);
+      // Ensure data is an array
+      setAlerts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error fetching alerts:', err);
+      setAlerts([]);
     } finally {
       setLoading(false);
     }
