@@ -46,6 +46,16 @@ export const useVoiceInterface = () => {
   const silenceTimerRef = useRef(null);
   const commandDebounceMs = 300;
 
+  // Preload voices (Chrome loads them asynchronously)
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices(); // trigger initial load
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices(); // cache them
+      };
+    }
+  }, []);
+
   // ── Force-start mic (safe to call any time, any number of times) ──
   const forceStartMic = useCallback(() => {
     if (!recognitionRef.current || isSpeakingRef.current || !micActiveRef.current) return;
@@ -107,6 +117,23 @@ export const useVoiceInterface = () => {
         resolve();
       };
 
+      // Select best Indian English voice for correct accent on words like "Routes", "Travel"
+      const pickIndianVoice = () => {
+        const voices = window.speechSynthesis.getVoices();
+        // Priority: en-IN voices first, then en-GB (closer to Indian accent), then any en
+        const enIN = voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en-IN'));
+        if (enIN) return enIN;
+        const enINAlt = voices.find(v => v.lang.toLowerCase().includes('in') && v.lang.startsWith('en'));
+        if (enINAlt) return enINAlt;
+        // Google/Microsoft Indian voices by name
+        const namedIndian = voices.find(v => /indian|india|ravi|heera/i.test(v.name) && v.lang.startsWith('en'));
+        if (namedIndian) return namedIndian;
+        // Fallback to en-GB (British pronunciation closer to Indian for "route" = "root")
+        const enGB = voices.find(v => v.lang === 'en-GB' || v.lang.startsWith('en-GB'));
+        if (enGB) return enGB;
+        return null;
+      };
+
       const next = () => {
         if (idx >= sentences.length) { done(); return; }
         const s = sentences[idx].trim();
@@ -114,6 +141,8 @@ export const useVoiceInterface = () => {
 
         const utt = new SpeechSynthesisUtterance(s);
         utt.lang = 'en-IN';
+        const preferredVoice = pickIndianVoice();
+        if (preferredVoice) utt.voice = preferredVoice;
         utt.rate = slowSpeed ? 1.0 : getVoiceSpeed();
         utt.pitch = 1.0;
         utt.volume = 1.0;
