@@ -190,6 +190,8 @@ const Navigate = () => {
   const [toLocked, setToLocked] = useState(false);
   const voiceFlowStepRef = useRef(null);
   const voiceFlowDataRef = useRef({ startLocation: '', destination: '', selectedRouteIndex: null, pendingMatches: [] });
+  const handleVoiceFlowCommandRef = useRef(null);
+  const routesRef = useRef([]);
 
   // Data persistence functions
   const saveNavigationData = () => {
@@ -306,7 +308,9 @@ const Navigate = () => {
         
         // Setup command listener first
         setupSpeechRecognition((transcript) => {
-          handleVoiceFlowCommand(transcript);
+          if (handleVoiceFlowCommandRef.current) {
+            handleVoiceFlowCommandRef.current(transcript);
+          }
         });
         
         // Wait a bit for recognition to initialize
@@ -344,12 +348,13 @@ const Navigate = () => {
 
   // Helper functions - defined before handleVoiceFlowCommand to avoid reference errors
   const selectRouteByVoice = useCallback(async (index) => {
-    if (!routes[index]) {
+    const currentRoutes = routesRef.current;
+    if (!currentRoutes[index]) {
       await speak('Invalid selection. Say 1, 2, or 3.', true, false);
       return;
     }
     
-    const route = routes[index];
+    const route = currentRoutes[index];
     setSelectedRoute(route);
     
     // Determine travel mode for Google Maps based on route type
@@ -373,7 +378,7 @@ const Navigate = () => {
     
     setVoiceFlowStep(null);
     voiceFlowStepRef.current = null;
-  }, [routes, speak]);
+  }, [speak]);
   
   const performRouteSearch = useCallback(async () => {
     setIsLoading(true);
@@ -434,6 +439,7 @@ const Navigate = () => {
       ];
       
       setRoutes(mockRoutes);
+      routesRef.current = mockRoutes;
       // Store routes in voice flow data for repeat command
       setVoiceFlowData(prev => ({ ...prev, _lastRoutes: mockRoutes }));
       voiceFlowDataRef.current = { ...voiceFlowDataRef.current, _lastRoutes: mockRoutes };
@@ -815,6 +821,11 @@ const Navigate = () => {
     const hint = stepHints[currentStep] || 'Say Repeat';
     await speak(hint, false, false);
   }, [speak, selectRouteByVoice, performRouteSearch, repeatCurrentStepMessage]);
+
+  // Keep handleVoiceFlowCommand ref up to date
+  useEffect(() => {
+    handleVoiceFlowCommandRef.current = handleVoiceFlowCommand;
+  }, [handleVoiceFlowCommand]);
 
   // Location voice recognition for input fields
   const setupLocationVoiceRecognition = (type) => {
