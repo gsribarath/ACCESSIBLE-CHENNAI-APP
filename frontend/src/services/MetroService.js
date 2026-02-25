@@ -9,6 +9,16 @@ class MetroService {
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
   }
 
+  // Getter to access static METRO_STATIONS from instance
+  get METRO_STATIONS() {
+    return MetroService.METRO_STATIONS;
+  }
+
+  // Getter to access static FARE_STRUCTURE from instance
+  get FARE_STRUCTURE() {
+    return MetroService.FARE_STRUCTURE;
+  }
+
   // Chennai Metro Stations with real coordinates and zones
   static METRO_STATIONS = {
     // Blue Line (Line 1) - Wimco Nagar Depot to Chennai International Airport

@@ -5,9 +5,7 @@ import { useCallback, useRef, useState, useEffect } from 'react';
  * Voice Mode Introduction Message
  * Spoken automatically when Voice Mode is activated
  */
-export const VOICE_MODE_INTRO = `Welcome to Accessible Chennai.
-You can say Navigate, Alerts, Community, or Settings.
-What would you like to do?`;
+export const VOICE_MODE_INTRO = `Voice mode active. Say Navigate, Alerts, Community, or Settings.`;
 
 /**
  * Emergency activation message
@@ -19,9 +17,9 @@ Calling your emergency contact now.`;
  * Voice speed settings
  */
 export const VOICE_SPEEDS = {
-  slow: 0.75,
-  normal: 0.9,
-  fast: 1.1
+  slow: 0.95,
+  normal: 1.2,
+  fast: 1.35
 };
 
 /**
@@ -39,225 +37,199 @@ export const getVoiceSpeed = () => {
 export const useVoiceInterface = () => {
   const [isListening, setIsListening] = useState(false);
   const [voiceFeedback, setVoiceFeedback] = useState('');
-  const [commandQueue, setCommandQueue] = useState([]);
-  const [silenceTimer, setSilenceTimer] = useState(null);
   const recognitionRef = useRef(null);
   const speakTimeoutRef = useRef(null);
   const lastCommandTime = useRef(0);
-  const isStartingRef = useRef(false); // Flag to prevent multiple simultaneous starts
-  const shouldRestartRef = useRef(true); // Flag to control auto-restart
-  const commandDebounceMs = 300; // Debounce commands for smooth operation
+  const isSpeakingRef = useRef(false);       // TRUE while TTS is active
+  const micActiveRef = useRef(false);         // TRUE = voice mode is on, mic MUST stay alive
+  const watchdogRef = useRef(null);           // Periodic timer that force-restarts mic
+  const silenceTimerRef = useRef(null);
+  const commandDebounceMs = 300;
 
-  // Enhanced Speech synthesis with accessibility-optimized settings - optimized for performance
+  // ── Force-start mic (safe to call any time, any number of times) ──
+  const forceStartMic = useCallback(() => {
+    if (!recognitionRef.current || isSpeakingRef.current || !micActiveRef.current) return;
+    try {
+      recognitionRef.current.start();
+    } catch (_) {
+      // "already started" or other – ignore, the watchdog will retry
+    }
+  }, []);
+
+  // ── WATCHDOG: every 1.5 s, if mic should be on but isn't, restart it ──
+  const startWatchdog = useCallback(() => {
+    if (watchdogRef.current) clearInterval(watchdogRef.current);
+    watchdogRef.current = setInterval(() => {
+      if (micActiveRef.current && !isSpeakingRef.current) {
+        // Check if recognition is actually running by testing isListening state
+        // If not listening, force restart
+        forceStartMic();
+      }
+    }, 1500);
+  }, [forceStartMic]);
+
+  const stopWatchdog = useCallback(() => {
+    if (watchdogRef.current) {
+      clearInterval(watchdogRef.current);
+      watchdogRef.current = null;
+    }
+  }, []);
+
+  // ── Speech synthesis ──
   const speak = useCallback((text, priority = false, slowSpeed = false) => {
     if (!('speechSynthesis' in window)) return Promise.resolve();
 
     return new Promise((resolve) => {
-      // Use requestAnimationFrame for smooth UI updates
-      requestAnimationFrame(() => {
-        if (speakTimeoutRef.current) {
-          clearTimeout(speakTimeoutRef.current);
-        }
-        
-        if (priority) {
-          window.speechSynthesis.cancel();
-        }
-        
-        // Split text into sentences for better pacing
-        const sentences = text.split(/[.!?]+/).filter(s => s.trim());
-        let currentIndex = 0;
-        
-        const speakNextSentence = () => {
-          if (currentIndex >= sentences.length) {
-            resolve();
-            return;
-          }
-          
-          const sentence = sentences[currentIndex].trim();
-          if (!sentence) {
-            currentIndex++;
-            speakNextSentence();
-            return;
-          }
-          
-          const utterance = new SpeechSynthesisUtterance(sentence);
-          utterance.lang = 'en-IN'; // Indian English for Chennai context
-          utterance.rate = slowSpeed ? 0.7 : getVoiceSpeed(); // Slower for important info
-          utterance.pitch = 1.0;
-          utterance.volume = 1.0;
-          
-          utterance.onend = () => {
-            currentIndex++;
-            // Short pause between sentences
-            setTimeout(speakNextSentence, 300);
-          };
-          
-          utterance.onerror = () => {
-            currentIndex++;
-            speakNextSentence();
-          };
-          
-          window.speechSynthesis.speak(utterance);
-        };
-        
-        speakNextSentence();
-        
-        // Optimized timeout
-        speakTimeoutRef.current = setTimeout(() => {
-          window.speechSynthesis.cancel();
-          resolve();
-        }, 30000); // Longer timeout for complex messages
-      });
-    });
-  }, []);
+      isSpeakingRef.current = true;
 
-  // Enhanced Speech recognition setup with comprehensive command handling - optimized
+      // Stop mic while speaking (browser can't do both well)
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (_) {}
+      }
+      setIsListening(false);
+
+      // Cancel any pending speech
+      window.speechSynthesis.cancel();
+      if (speakTimeoutRef.current) clearTimeout(speakTimeoutRef.current);
+
+      // Build sentences
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim());
+      // If no sentence delimiters, treat the whole text as one sentence
+      if (sentences.length === 0 && text.trim()) sentences.push(text.trim());
+
+      let idx = 0;
+
+      const done = () => {
+        if (speakTimeoutRef.current) { clearTimeout(speakTimeoutRef.current); speakTimeoutRef.current = null; }
+        isSpeakingRef.current = false;
+        // Restart mic after speaking
+        setTimeout(() => forceStartMic(), 250);
+        resolve();
+      };
+
+      const next = () => {
+        if (idx >= sentences.length) { done(); return; }
+        const s = sentences[idx].trim();
+        if (!s) { idx++; next(); return; }
+
+        const utt = new SpeechSynthesisUtterance(s);
+        utt.lang = 'en-IN';
+        utt.rate = slowSpeed ? 1.0 : getVoiceSpeed();
+        utt.pitch = 1.0;
+        utt.volume = 1.0;
+        utt.onend = () => { idx++; setTimeout(next, 150); };
+        utt.onerror = () => { idx++; next(); };
+        window.speechSynthesis.speak(utt);
+      };
+
+      next();
+
+      // Safety timeout – never leave isSpeaking stuck
+      speakTimeoutRef.current = setTimeout(() => {
+        window.speechSynthesis.cancel();
+        done();
+      }, 25000);
+    });
+  }, [forceStartMic]);
+
+  // ── Speech recognition setup ──
   const setupSpeechRecognition = useCallback((onCommand) => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       console.warn('Speech recognition not supported');
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognitionRef.current = new SR();
     recognitionRef.current.continuous = true;
-    recognitionRef.current.lang = 'en-IN'; // Indian English for better Chennai accent recognition
+    recognitionRef.current.lang = 'en-IN';
     recognitionRef.current.interimResults = true;
-    recognitionRef.current.maxAlternatives = 2; // Reduced for performance
+    recognitionRef.current.maxAlternatives = 2;
 
     recognitionRef.current.onstart = () => {
       setIsListening(true);
-      isStartingRef.current = false; // Reset flag once successfully started
-      setVoiceFeedback('Listening for your command...');
+      setVoiceFeedback('Listening...');
     };
 
     recognitionRef.current.onresult = (event) => {
-      const lastResultIndex = event.results.length - 1;
-      const result = event.results[lastResultIndex];
-      
-      if (result.isFinal) {
+      const last = event.results[event.results.length - 1];
+      if (last.isFinal) {
         const now = Date.now();
-        // Debounce rapid commands
-        if (now - lastCommandTime.current < commandDebounceMs) {
-          return;
-        }
+        if (now - lastCommandTime.current < commandDebounceMs) return;
         lastCommandTime.current = now;
-        
-        const transcript = result[0].transcript.toLowerCase().trim();
-        
-        // Use requestAnimationFrame for smooth UI updates
-        requestAnimationFrame(() => {
-          setVoiceFeedback(`Processing: "${transcript}"`);
-        });
-        
-        // Call the command handler
-        if (onCommand) {
-          onCommand(transcript);
-        }
-        
-        // Reset silence timer
-        if (silenceTimer) {
-          clearTimeout(silenceTimer);
-        }
+        const transcript = last[0].transcript.toLowerCase().trim();
+        setVoiceFeedback(`Processing: "${transcript}"`);
+        if (onCommand) onCommand(transcript);
       } else {
-        const transcript = result[0].transcript;
-        // Throttle interim result updates
-        requestAnimationFrame(() => {
-          setVoiceFeedback(`Listening: "${transcript}..."`);
-        });
+        setVoiceFeedback(`Listening: "${last[0].transcript}..."`);
       }
     };
 
     recognitionRef.current.onspeechend = () => {
-      // Start a timer to reassure user after prolonged silence
-      const timer = setTimeout(() => {
-        speak('I am still listening. Please say your command.', false, true);
-      }, 8000); // 8 seconds of silence
-      setSilenceTimer(timer);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = setTimeout(() => {
+        if (!isSpeakingRef.current && micActiveRef.current) {
+          speak('Still listening, go ahead', false, false);
+        }
+      }, 12000);
     };
 
     recognitionRef.current.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
-      setIsListening(false);
-      isStartingRef.current = false;
-      
-      if (event.error === 'no-speech') {
-        speak('I did not hear anything. Please say your command.', true, true);
-        // Don't auto-restart, let onend handle it
-      } else if (event.error === 'audio-capture') {
-        speak('No microphone detected. Please check your microphone.', true, true);
-        shouldRestartRef.current = false;
+      // During TTS, all errors are expected — ignore
+      if (isSpeakingRef.current) return;
+
+      if (event.error === 'audio-capture') {
+        speak('No microphone detected, please check your microphone', true, true);
+        micActiveRef.current = false;
+        stopWatchdog();
       } else if (event.error === 'not-allowed') {
-        speak('Microphone access denied. Please allow microphone access.', true, true);
-        shouldRestartRef.current = false;
-      } else if (event.error === 'aborted') {
-        // Aborted error is normal when stopping/restarting, just log it
-        console.log('Speech recognition aborted - this is normal during restart');
-      } else {
-        speak('Sorry, I did not understand. Please try again.', true, true);
+        speak('Microphone access denied, please allow microphone access in your browser', true, true);
+        micActiveRef.current = false;
+        stopWatchdog();
       }
+      // For 'aborted', 'no-speech', 'network' → do nothing, let onend + watchdog handle
     };
 
     recognitionRef.current.onend = () => {
       setIsListening(false);
-      isStartingRef.current = false;
-      
-      // Auto-restart listening to maintain continuous voice mode
-      if (shouldRestartRef.current && recognitionRef.current) {
-        setTimeout(() => {
-          if (recognitionRef.current && shouldRestartRef.current && !isStartingRef.current) {
-            try {
-              startListening();
-            } catch (error) {
-              console.error('Failed to restart listening:', error);
-            }
-          }
-        }, 500);
+      // If speaking, don't restart — speak() will handle it
+      if (isSpeakingRef.current) return;
+      // If mic should be on, restart immediately
+      if (micActiveRef.current) {
+        setTimeout(() => forceStartMic(), 300);
       }
     };
-  }, [speak, silenceTimer]);
+  }, [speak, forceStartMic, stopWatchdog]);
 
+  // ── Public start / stop ──
   const startListening = useCallback(() => {
-    if (recognitionRef.current && !isStartingRef.current) {
-      try {
-        isStartingRef.current = true;
-        shouldRestartRef.current = true;
-        recognitionRef.current.start();
-        console.log('Speech recognition started successfully');
-      } catch (error) {
-        console.error('Error starting speech recognition:', error);
-        isStartingRef.current = false;
-      }
-    }
-  }, []);
+    micActiveRef.current = true;
+    startWatchdog();
+    forceStartMic();
+  }, [forceStartMic, startWatchdog]);
 
   const stopListening = useCallback(() => {
-    shouldRestartRef.current = false;
+    micActiveRef.current = false;
+    stopWatchdog();
     if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (error) {
-        console.error('Error stopping speech recognition:', error);
-      }
+      try { recognitionRef.current.stop(); } catch (_) {}
     }
     setIsListening(false);
-    isStartingRef.current = false;
-  }, []);
+  }, [stopWatchdog]);
 
-  // Cleanup
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (speakTimeoutRef.current) {
-        clearTimeout(speakTimeoutRef.current);
-      }
-      if (silenceTimer) {
-        clearTimeout(silenceTimer);
-      }
+      if (speakTimeoutRef.current) clearTimeout(speakTimeoutRef.current);
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      stopWatchdog();
       window.speechSynthesis.cancel();
-      stopListening();
+      micActiveRef.current = false;
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (_) {}
+      }
     };
-  }, [stopListening, silenceTimer]);
+  }, [stopWatchdog]);
 
   return {
     isListening,
@@ -439,27 +411,28 @@ export class VoiceAssistantState {
  */
 export const getNavigateFlowMessage = (step, data = {}) => {
   const messages = {
-    START_LOCATION: "Please tell me your starting location.",
-    CONFIRM_START: `Your starting location is ${data.startLocation}. Is this correct? Please say Yes or No.`,
-    START_CONFIRMED: "Starting location confirmed.",
-    DESTINATION: "Please tell me your destination.",
-    CONFIRM_DESTINATION: `Your destination is ${data.destination}. Is this correct? Please say Yes or No.`,
-    DESTINATION_CONFIRMED: "Destination confirmed.",
-    FIND_ROUTES_PROMPT: "Please say Find Accessible Routes to check the best accessible travel options.",
-    FINDING_ROUTES: "Finding accessible routes now. Please wait.",
-    NO_ROUTES: "Sorry, no accessible routes found for this journey. Please try different locations.",
+    START_LOCATION: "Tell me your starting location.",
+    CONFIRM_START: `Starting location ${data.startLocation}. Confirm?`,
+    START_CONFIRMED: "Locked.",
+    DESTINATION: "Tell me your destination.",
+    CONFIRM_DESTINATION: `Destination ${data.destination}. Confirm?`,
+    DESTINATION_CONFIRMED: "Locked.",
+    CHOOSE_MODE: "Walk or Public Transport?",
+    FIND_ROUTES_PROMPT: "Say Find Routes to continue.",
+    FINDING_ROUTES: "Finding routes. Please wait.",
+    NO_ROUTES: "No routes found. Try different locations.",
     ROUTES_FOUND: (routes) => {
-      let message = `I found ${routes.length} accessible route${routes.length > 1 ? 's' : ''}. `;
+      let message = `${routes.length} routes found. `;
       routes.forEach((route, idx) => {
-        message += `Route ${idx + 1}: ${route.type} route. ${route.accessibility} accessibility. Estimated travel time ${route.estimatedTime} minutes. `;
+        message += `Route ${idx + 1}: ${route.type}, ${route.estimatedTime} minutes. `;
       });
-      message += `Please say Route 1, Route 2, or Route 3 to select.`;
+      message += `Say Route 1, 2, or 3.`;
       return message;
     },
-    ROUTE_SELECTED: (routeNum) => `You selected Route ${routeNum}.`,
-    CONFIRM_BOOKING: `Do you want to confirm this route? Please say Confirm or Cancel.`,
-    BOOKING_CONFIRMED: "Your accessible route has been confirmed. Navigation guidance will now begin. I will guide you step by step.",
-    BOOKING_CANCELLED: "Route booking cancelled. Returning to navigation menu."
+    ROUTE_SELECTED: (routeNum) => `Route ${routeNum} selected. Confirm?`,
+    CONFIRM_BOOKING: `Confirm this route? Yes or No.`,
+    BOOKING_CONFIRMED: "Route confirmed. Navigation starting.",
+    BOOKING_CANCELLED: "Cancelled."
   };
   
   return messages[step] || "";

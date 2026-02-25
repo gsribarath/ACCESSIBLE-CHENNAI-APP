@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -45,6 +45,7 @@ function Home() {
   } = useVoiceInterface();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [voiceSetupComplete, setVoiceSetupComplete] = useState(false);
+  const voiceSetupStartedRef = useRef(false);
 
   // First useEffect: Load user and set greeting
   useEffect(() => {
@@ -77,8 +78,9 @@ function Home() {
         const location = await LocationService.getCurrentLocation();
         setCurrentLocation(location);
         
-        // Get all metro stations
-        const allStations = Object.entries(MetroService.METRO_STATIONS).map(([name, data]) => ({
+        // Get all metro stations - with safety check
+        const metroStations = MetroService.METRO_STATIONS || {};
+        const allStations = Object.entries(metroStations).map(([name, data]) => ({
           name,
           ...data,
           type: 'metro'
@@ -168,11 +170,12 @@ function Home() {
 
   // Second useEffect: Setup voice commands for voice mode
   useEffect(() => {
-    if (!isVoiceMode || !user || voiceSetupComplete) {
+    if (!isVoiceMode || !user || voiceSetupComplete || voiceSetupStartedRef.current) {
       return;
     }
+    voiceSetupStartedRef.current = true;
 
-    // Speak the simple, clear introduction first
+   // Speak the simple, clear introduction first
     speak(VOICE_MODE_INTRO, true, true).then(() => {
       // After intro, start listening for commands
       if (setupSpeechRecognition) {
@@ -181,13 +184,13 @@ function Home() {
           
           // Handle emergency FIRST
           if (result.action === 'emergency') {
-            speak('Emergency mode activated. Calling your emergency contact now.', true, true).then(() => {
+            speak('Emergency mode activated, calling your emergency contact now', true, true).then(() => {
               // Get emergency contact
               const prefs = JSON.parse(localStorage.getItem('ac_prefs') || '{}');
               if (prefs.emergencyContact) {
                 navigate('/alerts', { state: { emergency: true } });
               } else {
-                speak('No emergency contact found. Please set up emergency contact in Settings.', true, true);
+                speak('No emergency contact found, please set up your emergency contact in the Settings page', true, true);
               }
             });
             return;
@@ -201,13 +204,13 @@ function Home() {
             else if (destination === '/community') pageName = 'Community';
             else if (destination === '/settings') pageName = 'Settings';
             
-            speak(`Opening ${pageName} page.`, false, true).then(() => {
+            speak(`Opening ${pageName} page`, false, true).then(() => {
               navigate(destination);
             });
           } else if (result.action === 'repeat') {
             speak(VOICE_MODE_INTRO, true, true);
           } else if (result.action === 'unknown') {
-            speak('Sorry, I did not understand. Please say Navigate, Alerts, Community, or Settings.', true, true);
+            speak('I did not understand that command, please say Navigate, Alerts, Community, or Settings', true, true);
           }
         });
 
@@ -276,20 +279,23 @@ function Home() {
           <div style={{
             width: window.innerWidth <= 768 ? 100 : 120,
             height: window.innerWidth <= 768 ? 100 : 120,
-            borderRadius: '50%',
+            borderRadius: '20px',
             background: 'var(--accent-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px',
-            boxShadow: 'var(--shadow)'
+            boxShadow: 'var(--shadow)',
+            padding: '10px'
           }}>
             <span style={{ 
-              fontSize: window.innerWidth <= 768 ? 32 : 40, 
+              fontSize: window.innerWidth <= 768 ? 18 : 22, 
               color: 'var(--card-bg)',
-              fontWeight: 'bold'
+              fontWeight: 'bold',
+              textAlign: 'center',
+              lineHeight: 1.2
             }}>
-              AC
+              Accessible Chennai
             </span>
           </div>
           <h1 style={{ 
@@ -517,102 +523,6 @@ function Home() {
             }}>
               Navigate Chennai with confidence using our comprehensive accessibility features
             </p>
-          </div>
-        </section>
-
-        {/* Quick Access */}
-        <section style={{ marginBottom: window.innerWidth <= 768 ? '20px' : '32px' }}>
-          <h3 style={{
-            fontSize: window.innerWidth <= 768 ? '1.125rem' : 'var(--font-size-xl)',
-            fontWeight: 'var(--font-weight-bold)',
-            fontFamily: 'var(--font-heading)',
-            marginBottom: window.innerWidth <= 768 ? '12px' : '20px',
-            ...getTextStyles('primary')
-          }}>
-            Quick Access
-          </h3>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 
-                                 window.innerWidth <= 768 ? 'repeat(2, 1fr)' : 
-                                 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: window.innerWidth <= 768 ? '12px' : '16px'
-          }}>
-            {[
-              { 
-                label: 'Nearby Metro Stations', 
-                path: '/navigate',
-                icon: faCompass,
-                color: '#3B82F6'
-              },
-              { 
-                label: 'Emergency Contacts', 
-                path: '/alerts',
-                icon: faPhoneAlt,
-                color: '#EF4444'
-              },
-              { 
-                label: 'Real-time Updates', 
-                path: '/alerts',
-                icon: faInfoCircle,
-                color: '#10B981'
-              }
-            ].map((link, idx) => (
-              <div
-                key={idx}
-                onClick={() => navigate(link.path)}
-                style={{
-                  ...getCardStyles(),
-                  padding: window.innerWidth <= 768 ? '14px 16px' : '16px 20px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  borderLeft: `4px solid ${link.color}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: window.innerWidth <= 768 ? '10px' : '12px',
-                  background: preferences.theme === 'dark' ? 
-                    'rgba(30,41,59,0.8)' : 
-                    'rgba(255,255,255,0.9)',
-                  WebkitTapHighlightColor: 'transparent'
-                }}
-                onMouseEnter={(e) => {
-                  if (window.innerWidth > 768) {
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                    e.currentTarget.style.boxShadow = `0 4px 16px ${link.color}30`;
-                  }
-              }}
-                onMouseLeave={(e) => {
-                  if (window.innerWidth > 768) {
-                    e.currentTarget.style.transform = 'translateX(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }
-                }}
-              >
-                <div style={{
-                  width: window.innerWidth <= 768 ? '36px' : '40px',
-                  height: window.innerWidth <= 768 ? '36px' : '40px',
-                  borderRadius: '10px',
-                  background: `${link.color}20`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: link.color,
-                  fontSize: window.innerWidth <= 768 ? '16px' : '18px',
-                  flexShrink: 0
-                }}>
-                  <FontAwesomeIcon icon={link.icon} />
-                </div>
-                <span style={{
-                  fontSize: window.innerWidth <= 768 ? '0.9375rem' : 'var(--font-size-base)',
-                  fontWeight: '600',
-                  ...getTextStyles('primary'),
-                  lineHeight: '1.3'
-                }}>
-                  {link.label}
-                </span>
-              </div>
-            ))}
           </div>
         </section>
 

@@ -534,28 +534,31 @@ const EnhancedLocationPicker = ({
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10000,
-        padding: '20px',
-        backdropFilter: 'blur(4px)'
+        padding: window.innerWidth <= 768 ? '12px' : '20px',
+        backdropFilter: 'blur(4px)',
+        boxSizing: 'border-box'
       }}
     >
       <div 
         onClick={(e) => e.stopPropagation()}
         style={{
           width: '100%',
-          maxWidth: '500px',
-          maxHeight: '80vh',
+          maxWidth: window.innerWidth <= 768 ? 'calc(100% - 24px)' : '500px',
+          maxHeight: window.innerWidth <= 768 ? '85vh' : '80vh',
           backgroundColor: 'var(--card-bg)',
-          borderRadius: '16px',
+          borderRadius: window.innerWidth <= 768 ? '12px' : '16px',
           boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          border: '1px solid var(--border-color)'
+          border: '1px solid var(--border-color)',
+          margin: 'auto',
+          position: 'relative'
         }}
       >
         {/* Header */}
         <div style={{
-          padding: '16px 20px',
+          padding: window.innerWidth <= 768 ? '12px 14px' : '16px 20px',
           borderBottom: '1px solid var(--border-color)',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white'
@@ -564,9 +567,9 @@ const EnhancedLocationPicker = ({
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            marginBottom: '12px'
+            marginBottom: window.innerWidth <= 768 ? '10px' : '12px'
           }}>
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600' }}>
+            <h3 style={{ margin: 0, fontSize: window.innerWidth <= 768 ? '16px' : '18px', fontWeight: '600' }}>
               Select Location
             </h3>
             <button
@@ -575,14 +578,14 @@ const EnhancedLocationPicker = ({
                 background: 'rgba(255, 255, 255, 0.2)',
                 border: 'none',
                 color: 'white',
-                width: '32px',
-                height: '32px',
+                width: window.innerWidth <= 768 ? '28px' : '32px',
+                height: window.innerWidth <= 768 ? '28px' : '32px',
                 borderRadius: '50%',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '16px'
+                fontSize: window.innerWidth <= 768 ? '14px' : '16px'
               }}
             >
               <FontAwesomeIcon icon={faTimes} />
@@ -595,11 +598,11 @@ const EnhancedLocationPicker = ({
               icon={faSearch} 
               style={{
                 position: 'absolute',
-                left: '14px',
+                left: window.innerWidth <= 768 ? '12px' : '14px',
                 top: '50%',
                 transform: 'translateY(-50%)',
                 color: 'rgba(0, 0, 0, 0.4)',
-                fontSize: '14px'
+                fontSize: window.innerWidth <= 768 ? '13px' : '14px'
               }}
             />
             <input
@@ -610,10 +613,10 @@ const EnhancedLocationPicker = ({
               placeholder={placeholder}
               style={{
                 width: '100%',
-                padding: '12px 14px 12px 42px',
+                padding: window.innerWidth <= 768 ? '10px 12px 10px 38px' : '12px 14px 12px 42px',
                 border: 'none',
-                borderRadius: '10px',
-                fontSize: '15px',
+                borderRadius: window.innerWidth <= 768 ? '8px' : '10px',
+                fontSize: window.innerWidth <= 768 ? '14px' : '15px',
                 backgroundColor: 'white',
                 color: '#333',
                 outline: 'none',
@@ -630,8 +633,8 @@ const EnhancedLocationPicker = ({
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            padding: '14px 20px',
+            gap: window.innerWidth <= 768 ? '10px' : '12px',
+            padding: window.innerWidth <= 768 ? '11px 14px' : '14px 20px',
             border: 'none',
             borderBottom: '1px solid var(--border-color)',
             background: gpsLoading ? 'var(--bg-secondary)' : 'var(--card-bg)',
@@ -640,35 +643,35 @@ const EnhancedLocationPicker = ({
             textAlign: 'left',
             color: 'var(--accent-color)',
             fontWeight: '500',
-            fontSize: '14px',
+            fontSize: window.innerWidth <= 768 ? '13px' : '14px',
             transition: 'background 0.2s'
           }}
         >
           <FontAwesomeIcon 
             icon={faLocationArrow} 
-            style={{ fontSize: '16px' }}
+            style={{ fontSize: window.innerWidth <= 768 ? '14px' : '16px' }}
           />
           {gpsLoading ? 'Getting location...' : 'Use Current Location'}
         </button>
 
         {/* Category Filter */}
         <div style={{
-          padding: '10px 16px',
+          padding: window.innerWidth <= 768 ? '8px 12px' : '10px 16px',
           borderBottom: '1px solid var(--border-color)',
           display: 'flex',
-          gap: '8px',
+          gap: window.innerWidth <= 768 ? '6px' : '8px',
           overflowX: 'auto',
           backgroundColor: 'var(--bg-secondary)'
         }}>
-          {categories.slice(0, 6).map(category => (
+          {categories.slice(0, window.innerWidth <= 768 ? 5 : 6).map(category => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}
               style={{
-                padding: '6px 12px',
+                padding: window.innerWidth <= 768 ? '5px 10px' : '6px 12px',
                 border: 'none',
                 borderRadius: '20px',
-                fontSize: '12px',
+                fontSize: window.innerWidth <= 768 ? '11px' : '12px',
                 fontWeight: '500',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
@@ -699,7 +702,7 @@ const EnhancedLocationPicker = ({
             style={{
               flex: 1,
               overflowY: 'auto',
-              padding: '8px 0'
+              padding: window.innerWidth <= 768 ? '4px 0' : '8px 0'
             }}
           >
             {filteredLocations.length === 0 ? (
@@ -716,9 +719,9 @@ const EnhancedLocationPicker = ({
                 <div key={letter} id={`location-group-${letter}`}>
                   {/* Letter Header */}
                   <div style={{
-                    padding: '8px 20px',
+                    padding: window.innerWidth <= 768 ? '6px 14px' : '8px 20px',
                     backgroundColor: 'var(--bg-secondary)',
-                    fontSize: '13px',
+                    fontSize: window.innerWidth <= 768 ? '12px' : '13px',
                     fontWeight: '700',
                     color: 'var(--accent-color)',
                     position: 'sticky',
@@ -736,8 +739,8 @@ const EnhancedLocationPicker = ({
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 20px',
+                        gap: window.innerWidth <= 768 ? '10px' : '12px',
+                        padding: window.innerWidth <= 768 ? '10px 14px' : '12px 20px',
                         cursor: 'pointer',
                         borderBottom: '1px solid var(--border-color)',
                         transition: 'background 0.15s'
@@ -746,22 +749,22 @@ const EnhancedLocationPicker = ({
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
                       <span style={{
-                        width: '32px',
-                        height: '32px',
+                        width: window.innerWidth <= 768 ? '28px' : '32px',
+                        height: window.innerWidth <= 768 ? '28px' : '32px',
                         borderRadius: '50%',
                         backgroundColor: getCategoryColor(location.category) + '20',
                         color: getCategoryColor(location.category),
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: '14px',
+                        fontSize: window.innerWidth <= 768 ? '12px' : '14px',
                         flexShrink: 0
                       }}>
                         <FontAwesomeIcon icon={getCategoryIcon(location.category)} />
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{
-                          fontSize: '14px',
+                          fontSize: window.innerWidth <= 768 ? '13px' : '14px',
                           fontWeight: '500',
                           color: 'var(--text-primary)',
                           whiteSpace: 'nowrap',
@@ -771,7 +774,7 @@ const EnhancedLocationPicker = ({
                           {location.name}
                         </div>
                         <div style={{
-                          fontSize: '12px',
+                          fontSize: window.innerWidth <= 768 ? '11px' : '12px',
                           color: 'var(--text-secondary)'
                         }}>
                           {location.category}
@@ -787,7 +790,7 @@ const EnhancedLocationPicker = ({
           {/* Alphabet Navigator */}
           {!searchTerm && filteredLocations.length > 10 && (
             <div style={{
-              width: '28px',
+              width: window.innerWidth <= 768 ? '24px' : '28px',
               backgroundColor: 'var(--bg-secondary)',
               display: 'flex',
               flexDirection: 'column',
@@ -804,11 +807,11 @@ const EnhancedLocationPicker = ({
                     onClick={() => isAvailable && scrollToLetter(letter)}
                     disabled={!isAvailable}
                     style={{
-                      width: '22px',
-                      height: '22px',
+                      width: window.innerWidth <= 768 ? '18px' : '22px',
+                      height: window.innerWidth <= 768 ? '18px' : '22px',
                       border: 'none',
                       background: 'transparent',
-                      fontSize: '11px',
+                      fontSize: window.innerWidth <= 768 ? '10px' : '11px',
                       fontWeight: '600',
                       color: isAvailable ? 'var(--accent-color)' : 'var(--text-disabled)',
                       cursor: isAvailable ? 'pointer' : 'default',
@@ -835,7 +838,7 @@ const EnhancedLocationPicker = ({
 
         {/* Footer */}
         <div style={{
-          padding: '12px 20px',
+          padding: window.innerWidth <= 768 ? '10px 14px' : '12px 20px',
           borderTop: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-secondary)',
           display: 'flex',
@@ -843,7 +846,7 @@ const EnhancedLocationPicker = ({
           alignItems: 'center'
         }}>
           <span style={{ 
-            fontSize: '12px', 
+            fontSize: window.innerWidth <= 768 ? '11px' : '12px', 
             color: 'var(--text-secondary)' 
           }}>
             {filteredLocations.length} locations
@@ -851,12 +854,12 @@ const EnhancedLocationPicker = ({
           <button
             onClick={onClose}
             style={{
-              padding: '8px 20px',
+              padding: window.innerWidth <= 768 ? '6px 16px' : '8px 20px',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: window.innerWidth <= 768 ? '6px' : '8px',
               background: 'var(--card-bg)',
               color: 'var(--text-primary)',
-              fontSize: '14px',
+              fontSize: window.innerWidth <= 768 ? '13px' : '14px',
               fontWeight: '500',
               cursor: 'pointer',
               transition: 'background 0.2s'

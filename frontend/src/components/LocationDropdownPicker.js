@@ -21,7 +21,7 @@ import { usePreferences } from '../context/PreferencesContext';
 import LocationService from '../services/LocationService';
 
 // Comprehensive list of Chennai locations organized by category
-const CHENNAI_LOCATIONS = [
+export const CHENNAI_LOCATIONS = [
   // Metro Stations
   { name: 'AG-DMS Metro Station', category: 'Metro Station' },
   { name: 'Airport Metro Station', category: 'Metro Station' },

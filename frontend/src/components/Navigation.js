@@ -70,7 +70,7 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
           </div>
           <h1 style={{ 
             margin: 0, 
-            fontSize: window.innerWidth <= 768 ? 'var(--font-size-lg)' : 'var(--font-size-xl)', 
+            fontSize: window.innerWidth <= 768 ? 'var(--font-size-base)' : 'var(--font-size-xl)', 
             fontWeight: 'var(--font-weight-semibold)',
             fontFamily: 'var(--font-heading)',
             letterSpacing: 'var(--letter-spacing-tight)',
@@ -79,7 +79,7 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
             overflow: 'hidden',
             textOverflow: 'ellipsis'
           }}>
-            {window.innerWidth <= 480 ? 'AC' : 'Accessible Chennai'}
+            Accessible Chennai
           </h1>
         </div>
       </header>
@@ -93,12 +93,14 @@ function Navigation({ showBottomNav = true, user = null, onLogout = null }) {
           right: 0,
           background: 'var(--nav-bg)',
           borderTop: '1px solid var(--border-color)',
-          padding: window.innerWidth <= 768 ? '6px 0' : '8px 0',
+          paddingTop: window.innerWidth <= 768 ? '6px' : '8px',
+          paddingLeft: 0,
+          paddingRight: 0,
+          paddingBottom: `max(${window.innerWidth <= 768 ? '6px' : '8px'}, env(safe-area-inset-bottom))`,
           display: 'flex',
           justifyContent: 'space-around',
           boxShadow: 'var(--shadow)',
           zIndex: 1000,
-          paddingBottom: 'env(safe-area-inset-bottom)'
         }}>
           {navItems.map(item => {
             const active = isActive(item.path);

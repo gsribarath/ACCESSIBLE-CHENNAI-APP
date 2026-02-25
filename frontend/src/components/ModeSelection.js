@@ -117,10 +117,13 @@ const ModeSelection = () => {
     };
 
     recognitionRef.current.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
+      // Don't log network errors to console to avoid noisy output
+      if (event.error !== 'network' && event.error !== 'aborted') {
+        console.error('Speech recognition error:', event.error);
+      }
       
-      if (event.error === 'no-speech') {
-        // Silently restart for no-speech
+      if (event.error === 'no-speech' || event.error === 'network') {
+        // Silently restart for no-speech and network errors
         if (!hasRedirectedRef.current) {
           setTimeout(() => startListening(), 500);
         }

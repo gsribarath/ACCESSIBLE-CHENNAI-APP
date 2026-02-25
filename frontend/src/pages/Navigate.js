@@ -23,11 +23,106 @@ import MetroNavigation from '../components/MetroNavigation';
 import MTCBusNavigation from '../components/MTCBusNavigation';
 import EnhancedMap from '../components/EnhancedMap';
 import FullScreenMap from '../components/FullScreenMap';
-import LocationDropdownPicker from '../components/LocationDropdownPicker';
+import LocationDropdownPicker, { CHENNAI_LOCATIONS } from '../components/LocationDropdownPicker';
 import LocationService from '../services/LocationService';
 import { usePreferences } from '../context/PreferencesContext';
 import { useVoiceInterface } from '../utils/voiceUtils';
 import '../styles/metro.css';
+
+// ========== FUZZY LOCATION MATCHING ==========
+// Matches spoken voice input against the CHENNAI_LOCATIONS dataset
+const normalizeText = (text) => {
+  return text
+    .toLowerCase()
+    .replace(/[.,!?'"]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+// Calculate similarity score between two strings (0 to 1)
+const similarityScore = (a, b) => {
+  const aNorm = normalizeText(a);
+  const bNorm = normalizeText(b);
+  
+  // Exact match
+  if (aNorm === bNorm) return 1.0;
+  
+  // One contains the other
+  if (bNorm.includes(aNorm)) return 0.85 + (aNorm.length / bNorm.length) * 0.1;
+  if (aNorm.includes(bNorm)) return 0.8;
+  
+  // Word-level matching
+  const aWords = aNorm.split(' ');
+  const bWords = bNorm.split(' ');
+  let matchedWords = 0;
+  for (const aw of aWords) {
+    if (aw.length < 2) continue;
+    for (const bw of bWords) {
+      if (bw.includes(aw) || aw.includes(bw)) {
+        matchedWords++;
+        break;
+      }
+    }
+  }
+  const wordScore = aWords.length > 0 ? matchedWords / aWords.length : 0;
+  
+  // Levenshtein-based similarity for short inputs
+  const maxLen = Math.max(aNorm.length, bNorm.length);
+  if (maxLen === 0) return 0;
+  const dist = levenshteinDistance(aNorm, bNorm);
+  const levScore = 1 - (dist / maxLen);
+  
+  return Math.max(wordScore * 0.9, levScore);
+};
+
+const levenshteinDistance = (a, b) => {
+  const matrix = [];
+  for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+  for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+  for (let i = 1; i <= b.length; i++) {
+    for (let j = 1; j <= a.length; j++) {
+      if (b[i - 1] === a[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return matrix[b.length][a.length];
+};
+
+/**
+ * Match spoken input against CHENNAI_LOCATIONS dataset.
+ * Returns: { matches: [{name, category, score}], bestMatch: {name, category, score} | null }
+ * Thresholds: score >= 0.5 to be a viable match
+ */
+const matchLocationFromDataset = (spokenInput) => {
+  if (!spokenInput || spokenInput.trim().length < 2) {
+    return { matches: [], bestMatch: null };
+  }
+  
+  const scored = CHENNAI_LOCATIONS.map(loc => ({
+    name: loc.name,
+    category: loc.category,
+    score: similarityScore(spokenInput, loc.name)
+  }))
+    .filter(m => m.score >= 0.45)
+    .sort((a, b) => b.score - a.score);
+  
+  // Get top matches (score within 0.1 of best)
+  const topMatches = scored.length > 0
+    ? scored.filter(m => m.score >= scored[0].score - 0.1).slice(0, 5)
+    : [];
+  
+  return {
+    matches: topMatches,
+    bestMatch: topMatches.length > 0 ? topMatches[0] : null
+  };
+};
 
 // Debounce helper for smooth performance
 const useDebounce = (value, delay) => {
@@ -52,7 +147,6 @@ const Navigate = () => {
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState({ from: [], to: [] });
   const [activeInput, setActiveInput] = useState(null);
-  const [voiceInputMode, setVoiceInputMode] = useState(null); // 'from', 'to', or null
   const [showFullScreenMap, setShowFullScreenMap] = useState(false);
   const [dataRestored, setDataRestored] = useState(false);
   const [searchQueryFrom, setSearchQueryFrom] = useState('');
@@ -80,13 +174,22 @@ const Navigate = () => {
   } = useVoiceInterface();
 
   // Voice-guided flow state
-  const [voiceFlowStep, setVoiceFlowStep] = useState(null); // null, 'START_LOCATION', 'CONFIRM_START', 'DESTINATION', 'CONFIRM_DESTINATION', 'FIND_ROUTES', 'SELECT_ROUTE', 'CONFIRM_BOOKING'
+  const [voiceFlowStep, setVoiceFlowStep] = useState(null);
+  // Strict voice flow states:
+  // null -> START_LOCATION -> [PICK_START_MATCH] -> CONFIRM_START -> DESTINATION -> [PICK_DEST_MATCH] -> CONFIRM_DESTINATION -> CHOOSE_MODE -> BOTH_LOCKED -> FINDING_ROUTES -> SELECT_ROUTE -> CONFIRM_BOOKING
   const [voiceFlowData, setVoiceFlowData] = useState({
     startLocation: '',
     destination: '',
-    selectedRouteIndex: null
+    selectedRouteIndex: null,
+    pendingMatches: [] // For multi-match selection
   });
   const [voiceSetupComplete, setVoiceSetupComplete] = useState(false);
+  const voiceSetupStartedRef = useRef(false); // Prevent duplicate voice flow init (React StrictMode)
+  // Location locking state for strict voice mode
+  const [fromLocked, setFromLocked] = useState(false);
+  const [toLocked, setToLocked] = useState(false);
+  const voiceFlowStepRef = useRef(null);
+  const voiceFlowDataRef = useRef({ startLocation: '', destination: '', selectedRouteIndex: null, pendingMatches: [] });
 
   // Data persistence functions
   const saveNavigationData = () => {
@@ -141,17 +244,19 @@ const Navigate = () => {
     setDataRestored(false);
   };
 
-  // Load saved data on component mount
+  // Always start fresh when navigating to this page
   useEffect(() => {
-    loadNavigationData();
+    localStorage.removeItem('accessibleChennaiNavigation');
+    setFromLocation('');
+    setToLocation('');
+    setRoutes([]);
+    setSelectedRoute(null);
+    setFromLocked(false);
+    setToLocked(false);
+    setError('');
   }, []);
 
-  // Save data whenever navigation state changes
-  useEffect(() => {
-    if (fromLocation || toLocation || routes.length > 0) {
-      saveNavigationData();
-    }
-  }, [fromLocation, toLocation, transportMode, routes, selectedRoute]);
+  // No longer auto-saving navigation state to avoid stale data on page revisit
   
   // Handle click outside to close suggestions
   useEffect(() => {
@@ -178,19 +283,26 @@ const Navigate = () => {
     if (!isVoiceMode) {
       // Clean up when leaving voice mode
       setVoiceSetupComplete(false);
+      voiceSetupStartedRef.current = false;
       setVoiceFlowStep(null);
+      voiceFlowStepRef.current = null;
+      setFromLocked(false);
+      setToLocked(false);
       stopListening();
       return;
     }
 
-    if (voiceSetupComplete || !setupSpeechRecognition) {
+    if (voiceSetupComplete || voiceSetupStartedRef.current || !setupSpeechRecognition) {
       return;
     }
 
-    // Start the voice-guided flow
+    // Immediately mark as started to prevent duplicate invocations (React StrictMode)
+    voiceSetupStartedRef.current = true;
+
+    // Start the strict voice-guided flow
     const startVoiceFlow = async () => {
       try {
-        console.log('Starting voice-guided navigation flow');
+        console.log('Starting strict voice-guided navigation flow');
         
         // Setup command listener first
         setupSpeechRecognition((transcript) => {
@@ -200,12 +312,14 @@ const Navigate = () => {
         // Wait a bit for recognition to initialize
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Step 1: Ask for starting location
-        await speak('Welcome to Navigate mode. Please tell me your starting location.', true, true);
+        // Welcome and ask for starting location - clear and natural
+        await speak('Where are you starting from?', true, false);
+        
         setVoiceFlowStep('START_LOCATION');
+        voiceFlowStepRef.current = 'START_LOCATION';
         
         // Start listening after speaking
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 400));
         startListening();
         
         setVoiceSetupComplete(true);
@@ -231,14 +345,34 @@ const Navigate = () => {
   // Helper functions - defined before handleVoiceFlowCommand to avoid reference errors
   const selectRouteByVoice = useCallback(async (index) => {
     if (!routes[index]) {
-      await speak('That route is not available. Please select another route.', true, true);
+      await speak('Invalid selection. Say 1, 2, or 3.', true, false);
       return;
     }
     
     const route = routes[index];
     setSelectedRoute(route);
-    setVoiceFlowStep('CONFIRM_BOOKING');
-    await speak(`You selected Route ${index + 1}. Do you want to confirm this route? Please say Confirm or Cancel.`, false, true);
+    
+    // Determine travel mode for Google Maps based on route type
+    let travelMode = 'transit';
+    const routeType = (route.type || route.mode || '').toLowerCase();
+    if (routeType.includes('cab') || routeType.includes('taxi') || routeType.includes('driving') || routeType.includes('car')) {
+      travelMode = 'driving';
+    } else if (routeType.includes('walk')) {
+      travelMode = 'walking';
+    }
+    // Metro and Bus both use transit
+    
+    const origin = encodeURIComponent(voiceFlowDataRef.current.startLocation);
+    const destination = encodeURIComponent(voiceFlowDataRef.current.destination);
+    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${travelMode}&dir_action=navigate`;
+    
+    await speak(`Opening Route ${index + 1} in Google Maps.`, false, false);
+    
+    // Open Google Maps navigation
+    window.open(googleMapsUrl, '_blank');
+    
+    setVoiceFlowStep(null);
+    voiceFlowStepRef.current = null;
   }, [routes, speak]);
   
   const performRouteSearch = useCallback(async () => {
@@ -250,166 +384,437 @@ const Navigate = () => {
       // Mock routes for demo
       const mockRoutes = [
         {
+          mode: 'Walk + Metro',
           type: 'Metro',
-          accessibility: 'High',
+          duration: '25 mins',
+          distance: '8.9 km',
+          cost: '\u20B920',
           estimatedTime: 25,
+          accessibilityScore: 100,
+          accessibility: 'High',
           hasLift: true,
+          busRoutes: [],
+          realTimeInfo: { nextMetroArrival: '2 mins', crowdLevel: 'Low' },
+          accessibilityFeatures: ['Elevator', 'Tactile Paths', 'Audio Announcements', 'Wheelchair Ramp'],
+          carbonFootprint: '0.2 kg CO2',
           facilities: ['Elevator', 'Tactile Paths', 'Audio Announces']
         },
         {
+          mode: 'Bus Route',
           type: 'Low-floor bus',
-          accessibility: 'Medium',
+          duration: '35 mins',
+          distance: '12.3 km',
+          cost: '\u20B915',
           estimatedTime: 35,
+          accessibilityScore: 75,
+          accessibility: 'Medium',
+          hasLift: false,
+          busRoutes: ['M70', 'S12'],
+          realTimeInfo: { nextBusArrival: '5 mins', crowdLevel: 'Medium' },
+          accessibilityFeatures: ['Low-floor Entry', 'Priority Seating'],
+          carbonFootprint: '0.5 kg CO2',
           facilities: ['Low-floor entry', 'Priority seating']
         },
         {
-          type: 'Accessible cab',
-          accessibility: 'High',
+          mode: 'Wheelchair Accessible Cab',
+          type: 'Wheelchair accessible cab',
+          duration: '20 mins',
+          distance: '10.1 km',
+          cost: '\u20B9250',
           estimatedTime: 20,
+          accessibilityScore: 95,
+          accessibility: 'High',
+          hasLift: false,
+          busRoutes: [],
+          realTimeInfo: { crowdLevel: 'Low' },
+          accessibilityFeatures: ['Wheelchair Support', 'Door-to-door Service', 'Ramp Access'],
+          carbonFootprint: '1.2 kg CO2',
           facilities: ['Wheelchair support', 'Door-to-door service']
         }
       ];
       
       setRoutes(mockRoutes);
+      // Store routes in voice flow data for repeat command
+      setVoiceFlowData(prev => ({ ...prev, _lastRoutes: mockRoutes }));
+      voiceFlowDataRef.current = { ...voiceFlowDataRef.current, _lastRoutes: mockRoutes };
       setVoiceFlowStep('SELECT_ROUTE');
+      voiceFlowStepRef.current = 'SELECT_ROUTE';
       
-      // Announce routes
+      // Announce routes clearly per spec
       let announcement = `I found ${mockRoutes.length} accessible routes. `;
-      mockRoutes.forEach((route, idx) => {
-        announcement += `Route ${idx + 1}: ${route.type} route. ${route.accessibility} accessibility. Estimated travel time ${route.estimatedTime} minutes. `;
-      });
-      announcement += `Please say Route 1, Route 2, or Route 3 to select.`;
+      announcement += `Route 1. ${mockRoutes[0].type}${mockRoutes[0].hasLift ? ' with lift access' : ''}. Travel time ${mockRoutes[0].estimatedTime} minutes. `;
+      announcement += `Route 2. ${mockRoutes[1].type}. Travel time ${mockRoutes[1].estimatedTime} minutes. `;
+      announcement += `Route 3. ${mockRoutes[2].type}. Travel time ${mockRoutes[2].estimatedTime} minutes. `;
+      announcement += 'Say the route number to continue.';
       
-      await speak(announcement, false, true);
+      await speak(announcement, false, false);
     } catch (error) {
-      await speak('Sorry, I could not find accessible routes. Please try again.', true, true);
-      setVoiceFlowStep(null);
+      await speak('No routes found. Try again.', true, false);
+      setVoiceFlowStep('BOTH_LOCKED');
+      voiceFlowStepRef.current = 'BOTH_LOCKED';
     } finally {
       setIsLoading(false);
     }
   }, [speak]);
   
   const repeatCurrentStepMessage = useCallback(async () => {
-    switch (voiceFlowStep) {
+    const step = voiceFlowStepRef.current;
+    const data = voiceFlowDataRef.current;
+    switch (step) {
       case 'START_LOCATION':
-        await speak('Please tell me your starting location.', true, true);
+        await speak('Where are you starting from?', true, false);
+        break;
+      case 'PICK_START_MATCH':
+        await speak('Say Option 1, 2, or 3', true, false);
         break;
       case 'CONFIRM_START':
-        await speak(`Your starting location is ${voiceFlowData.startLocation}. Is this correct? Please say Yes or No.`, true, true);
+        await speak(`${data.startLocation}, yes or no?`, true, false);
         break;
       case 'DESTINATION':
-        await speak('Please tell me your destination.', true, true);
+        await speak('Where do you want to go?', true, false);
+        break;
+      case 'PICK_DEST_MATCH':
+        await speak('Say Option 1, 2, or 3', true, false);
         break;
       case 'CONFIRM_DESTINATION':
-        await speak(`Your destination is ${voiceFlowData.destination}. Is this correct? Please say Yes or No.`, true, true);
+        await speak(`${data.destination}, yes or no?`, true, false);
         break;
-      case 'FIND_ROUTES_PROMPT':
-        await speak('Please say Find Accessible Routes to check the best accessible travel options.', true, true);
+      case 'CHOOSE_MODE':
+        await speak('Walk or Public Transport?', true, false);
         break;
+      case 'BOTH_LOCKED':
+        await speak('Say Find Accessible Routes.', true, false);
+        break;
+      case 'SELECT_ROUTE': {
+        // Repeat the full route list once
+        const rts = voiceFlowDataRef.current._lastRoutes;
+        if (rts && rts.length > 0) {
+          let msg = `Route 1. ${rts[0].type}${rts[0].hasLift ? ' with lift access' : ''}. Travel time ${rts[0].estimatedTime} minutes. `;
+          msg += `Route 2. ${rts[1].type}. Travel time ${rts[1].estimatedTime} minutes. `;
+          msg += `Route 3. ${rts[2].type}. Travel time ${rts[2].estimatedTime} minutes. `;
+          msg += 'Say the route number to continue.';
+          await speak(msg, true, false);
+        } else {
+          await speak('Say 1, 2, or 3 to select a route.', true, false);
+        }
+        break;
+      }
       default:
-        await speak('Say Repeat to hear the last message again.', true, true);
+        await speak('Say Repeat', true, false);
     }
-  }, [voiceFlowStep, voiceFlowData, speak]);
+  }, [speak]);
 
-  // Handle voice commands based on current flow step
+  // Keep refs in sync with state
+  useEffect(() => {
+    voiceFlowStepRef.current = voiceFlowStep;
+  }, [voiceFlowStep]);
+  useEffect(() => {
+    voiceFlowDataRef.current = voiceFlowData;
+  }, [voiceFlowData]);
+
+  // STRICT VOICE FLOW COMMAND HANDLER
+  // Rules: Always FROM first, then TO. Confirm each. Lock each. Never swap. Never proceed without confirmation.
   const handleVoiceFlowCommand = useCallback(async (transcript) => {
     const command = transcript.toLowerCase().trim();
+    const currentStep = voiceFlowStepRef.current;
+    const currentData = voiceFlowDataRef.current;
     
-    // Emergency check first
+    console.log(`[Voice Flow] Step: ${currentStep}, Command: "${command}"`);
+    
+    // ========== EMERGENCY CHECK (always available) ==========
     if (command.includes('emergency') || command.includes('help me')) {
-      await speak('Emergency mode activated. Calling your emergency contact now.', true, true);
+      await speak('Emergency mode activated. Calling emergency contact.', true, false);
       return;
     }
     
-    // Handle confirmation responses
-    if (voiceFlowStep === 'CONFIRM_START') {
-      if (command.includes('yes') || command.includes('correct') || command.includes('confirm')) {
-        await speak('Starting location confirmed.', false, true);
-        setFromLocation(voiceFlowData.startLocation);
+    // ========== REPEAT COMMAND (always available) ==========
+    if (command.includes('repeat') || command.includes('say again') || command.includes('again')) {
+      await repeatCurrentStepMessage();
+      return;
+    }
+
+    // ========== CHANGE COMMANDS (available after locking) ==========
+    if (command.includes('change starting') || command.includes('change from') || command.includes('change start')) {
+      setFromLocked(false);
+      setFromLocation('');
+      setVoiceFlowStep('START_LOCATION');
+      voiceFlowStepRef.current = 'START_LOCATION';
+      setVoiceFlowData(prev => ({ ...prev, startLocation: '' }));
+      voiceFlowDataRef.current = { ...voiceFlowDataRef.current, startLocation: '' };
+      await speak('Tell me new starting location.', false, false);
+      return;
+    }
+    
+    if (command.includes('change destination') || command.includes('change to location') || command.includes('change where')) {
+      setToLocked(false);
+      setToLocation('');
+      setVoiceFlowStep('DESTINATION');
+      voiceFlowStepRef.current = 'DESTINATION';
+      setVoiceFlowData(prev => ({ ...prev, destination: '' }));
+      voiceFlowDataRef.current = { ...voiceFlowDataRef.current, destination: '' };
+      await speak('Tell me new destination.', false, false);
+      return;
+    }
+
+    // ========== STEP: START_LOCATION ==========
+    if (currentStep === 'START_LOCATION') {
+      // If user tries to say find/search/book before both locked
+      if (command.includes('find') || command.includes('search') || command.includes('book')) {
+        await speak('First, tell me your starting location', false, false);
+        return;
+      }
+      
+      // Capture the spoken location and match against dataset
+      const location = transcript.trim();
+      if (location.length < 2) {
+        await speak('Could not catch that, say your starting location again', false, false);
+        return;
+      }
+      
+      // Fuzzy match against CHENNAI_LOCATIONS
+      const { matches, bestMatch } = matchLocationFromDataset(location);
+      
+      if (!bestMatch) {
+        // No match found
+        await speak(`Could not find ${location}, try again`, false, false);
+        return;
+      }
+      
+      if (matches.length === 1 || bestMatch.score >= 0.85) {
+        // Single clear match - go to confirmation
+        setVoiceFlowData(prev => ({ ...prev, startLocation: bestMatch.name }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, startLocation: bestMatch.name };
+        setVoiceFlowStep('CONFIRM_START');
+        voiceFlowStepRef.current = 'CONFIRM_START';
+        await speak(`Starting from ${bestMatch.name}, correct?`, false, false);
+      } else {
+        // Multiple matches - ask user to pick
+        const topOptions = matches.slice(0, 3);
+        setVoiceFlowData(prev => ({ ...prev, pendingMatches: topOptions }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, pendingMatches: topOptions };
+        setVoiceFlowStep('PICK_START_MATCH');
+        voiceFlowStepRef.current = 'PICK_START_MATCH';
+        let msg = '';
+        topOptions.forEach((m, i) => { msg += `Option ${i + 1}, ${m.name}, `; });
+        msg += 'which one?';
+        await speak(msg, false, false);
+      }
+      return;
+    }
+
+    // ========== STEP: PICK_START_MATCH (multiple matches for FROM) ==========
+    if (currentStep === 'PICK_START_MATCH') {
+      const pending = currentData.pendingMatches || [];
+      let picked = null;
+      if (command.includes('1') || command.includes('one') || command.includes('first')) picked = pending[0];
+      else if (command.includes('2') || command.includes('two') || command.includes('second')) picked = pending[1];
+      else if (command.includes('3') || command.includes('three') || command.includes('third')) picked = pending[2];
+      
+      if (picked) {
+        setVoiceFlowData(prev => ({ ...prev, startLocation: picked.name, pendingMatches: [] }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, startLocation: picked.name, pendingMatches: [] };
+        setVoiceFlowStep('CONFIRM_START');
+        voiceFlowStepRef.current = 'CONFIRM_START';
+        await speak(`Starting from ${picked.name}, correct?`, false, false);
+      } else {
+        await speak('Say Option 1, 2, or 3', false, false);
+      }
+      return;
+    }
+
+    // ========== STEP: CONFIRM_START ==========
+    if (currentStep === 'CONFIRM_START') {
+      if (command.includes('yes') || command.includes('correct') || command.includes('confirm') || command.includes('right') || command.includes('yeah') || command.includes('yep') || command.includes('sure') || command.includes('okay') || command.includes('ok')) {
+        const loc = currentData.startLocation;
+        setFromLocation(loc);
+        setFromLocked(true);
+        await speak(`Got it, ${loc}, now where do you want to go?`, false, false);
+        
         setVoiceFlowStep('DESTINATION');
-        await speak('Please tell me your destination.', false, true);
-      } else if (command.includes('no') || command.includes('wrong') || command.includes('incorrect')) {
-        await speak('Please tell me your starting location again.', false, true);
+        voiceFlowStepRef.current = 'DESTINATION';
+      } else if (command.includes('no') || command.includes('wrong') || command.includes('incorrect') || command.includes('not correct') || command.includes('nope') || command.includes('change')) {
         setVoiceFlowStep('START_LOCATION');
+        voiceFlowStepRef.current = 'START_LOCATION';
+        setVoiceFlowData(prev => ({ ...prev, startLocation: '' }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, startLocation: '' };
+        await speak('Okay, say your starting location again', false, false);
+      } else {
+        await speak(`${currentData.startLocation}, yes or no?`, false, false);
       }
       return;
     }
-    
-    if (voiceFlowStep === 'CONFIRM_DESTINATION') {
-      if (command.includes('yes') || command.includes('correct') || command.includes('confirm')) {
-        await speak('Destination confirmed.', false, true);
-        setToLocation(voiceFlowData.destination);
-        setVoiceFlowStep('FIND_ROUTES_PROMPT');
-        await speak('Please say Find Accessible Routes to check the best accessible travel options.', false, true);
-      } else if (command.includes('no') || command.includes('wrong') || command.includes('incorrect')) {
-        await speak('Please tell me your destination again.', false, true);
+
+    // ========== STEP: DESTINATION ==========
+    if (currentStep === 'DESTINATION') {
+      // If user tries to say find/search/book before both locked
+      if (command.includes('find') || command.includes('search') || command.includes('book')) {
+        await speak('Tell me your destination first', false, false);
+        return;
+      }
+      
+      // Capture the spoken destination and match against dataset
+      const location = transcript.trim();
+      if (location.length < 2) {
+        await speak('Could not catch that, say your destination again', false, false);
+        return;
+      }
+      
+      // Fuzzy match against CHENNAI_LOCATIONS
+      const { matches, bestMatch } = matchLocationFromDataset(location);
+      
+      if (!bestMatch) {
+        await speak(`Could not find ${location}, try again`, false, false);
+        return;
+      }
+      
+      if (matches.length === 1 || bestMatch.score >= 0.85) {
+        // Single clear match
+        setVoiceFlowData(prev => ({ ...prev, destination: bestMatch.name }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, destination: bestMatch.name };
+        setVoiceFlowStep('CONFIRM_DESTINATION');
+        voiceFlowStepRef.current = 'CONFIRM_DESTINATION';
+        await speak(`Going to ${bestMatch.name}, correct?`, false, false);
+      } else {
+        // Multiple matches
+        const topOptions = matches.slice(0, 3);
+        setVoiceFlowData(prev => ({ ...prev, pendingMatches: topOptions }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, pendingMatches: topOptions };
+        setVoiceFlowStep('PICK_DEST_MATCH');
+        voiceFlowStepRef.current = 'PICK_DEST_MATCH';
+        let msg = '';
+        topOptions.forEach((m, i) => { msg += `Option ${i + 1}, ${m.name}, `; });
+        msg += 'which one?';
+        await speak(msg, false, false);
+      }
+      return;
+    }
+
+    // ========== STEP: PICK_DEST_MATCH (multiple matches for TO) ==========
+    if (currentStep === 'PICK_DEST_MATCH') {
+      const pending = currentData.pendingMatches || [];
+      let picked = null;
+      if (command.includes('1') || command.includes('one') || command.includes('first')) picked = pending[0];
+      else if (command.includes('2') || command.includes('two') || command.includes('second')) picked = pending[1];
+      else if (command.includes('3') || command.includes('three') || command.includes('third')) picked = pending[2];
+      
+      if (picked) {
+        setVoiceFlowData(prev => ({ ...prev, destination: picked.name, pendingMatches: [] }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, destination: picked.name, pendingMatches: [] };
+        setVoiceFlowStep('CONFIRM_DESTINATION');
+        voiceFlowStepRef.current = 'CONFIRM_DESTINATION';
+        await speak(`Going to ${picked.name}, correct?`, false, false);
+      } else {
+        await speak('Say Option 1, 2, or 3', false, false);
+      }
+      return;
+    }
+
+    // ========== STEP: CONFIRM_DESTINATION ==========
+    if (currentStep === 'CONFIRM_DESTINATION') {
+      if (command.includes('yes') || command.includes('correct') || command.includes('confirm') || command.includes('right') || command.includes('yeah') || command.includes('yep') || command.includes('sure') || command.includes('okay') || command.includes('ok')) {
+        const loc = currentData.destination;
+        setToLocation(loc);
+        setToLocked(true);
+        await speak(`Got it, ${loc}, walk or public transport?`, false, false);
+        
+        setVoiceFlowStep('CHOOSE_MODE');
+        voiceFlowStepRef.current = 'CHOOSE_MODE';
+      } else if (command.includes('no') || command.includes('wrong') || command.includes('incorrect') || command.includes('not correct') || command.includes('nope') || command.includes('change')) {
         setVoiceFlowStep('DESTINATION');
+        voiceFlowStepRef.current = 'DESTINATION';
+        setVoiceFlowData(prev => ({ ...prev, destination: '' }));
+        voiceFlowDataRef.current = { ...voiceFlowDataRef.current, destination: '' };
+        await speak('Okay, say your destination again', false, false);
+      } else {
+        await speak(`${currentData.destination}, yes or no?`, false, false);
       }
       return;
     }
-    
-    if (voiceFlowStep === 'CONFIRM_BOOKING') {
-      if (command.includes('confirm') || command.includes('yes')) {
-        await speak('Your accessible route has been confirmed. Navigation guidance will now begin. I will guide you step by step.', false, true);
-        setIsNavigating(true);
+
+    // ========== STEP: CHOOSE_MODE (walk or public transport) ==========
+    if (currentStep === 'CHOOSE_MODE') {
+      if (command.includes('walk') || command.includes('walking') || command.includes('on foot') || command.includes('by foot')) {
+        await speak('Opening walking directions in Google Maps', false, false);
+        // Build Google Maps walking directions URL with live navigation
+        const origin = encodeURIComponent(currentData.startLocation);
+        const destination = encodeURIComponent(currentData.destination);
+        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=walking&dir_action=navigate`;
+        // Open Google Maps in a new tab
+        window.open(googleMapsUrl, '_blank');
         setVoiceFlowStep(null);
-      } else if (command.includes('cancel') || command.includes('no')) {
-        await speak('Route booking cancelled. Returning to navigation menu.', false, true);
-        setVoiceFlowStep(null);
-        setSelectedRoute(null);
+        voiceFlowStepRef.current = null;
+        return;
+      } else if (command.includes('public') || command.includes('transport') || command.includes('bus') || command.includes('metro') || command.includes('train')) {
+        await speak('Public transport, say Find Routes', false, false);
+        setVoiceFlowStep('BOTH_LOCKED');
+        voiceFlowStepRef.current = 'BOTH_LOCKED';
+      } else {
+        await speak('Say Walk or Public Transport', false, false);
       }
       return;
     }
-    
-    // Handle route selection
-    if (voiceFlowStep === 'SELECT_ROUTE') {
-      if (command.includes('route 1') || command.includes('route one') || command.includes('first')) {
+
+    // ========== STEP: BOTH_LOCKED (waiting for find routes - public transport) ==========
+    if (currentStep === 'BOTH_LOCKED') {
+      if (command.includes('find accessible route') || command.includes('accessible route') || command.includes('find route') || command.includes('find') || command.includes('route') || command.includes('search') || command.includes('go')) {
+        await speak('Searching accessible routes.', false, false);
+        setVoiceFlowStep('FINDING_ROUTES');
+        voiceFlowStepRef.current = 'FINDING_ROUTES';
+        await performRouteSearch();
+      } else if (command.includes('open map') || command.includes('open google')) {
+        await speak('Please select a route number first.', false, false);
+      } else {
+        await speak('Say Find Accessible Routes.', false, false);
+      }
+      return;
+    }
+
+    // ========== STEP: SELECT_ROUTE ==========
+    if (currentStep === 'SELECT_ROUTE') {
+      // Strip all punctuation/whitespace for clean matching (speech returns "1.", "3." etc.)
+      const cleaned = command.replace(/[^a-z0-9\s]/g, '').trim();
+      
+      // Safety rule: don't open maps without a route number
+      if (cleaned.includes('open map') || cleaned.includes('open google') || cleaned.includes('navigate')) {
+        await speak('Please select a route number first.', false, false);
+        return;
+      }
+      
+      // Accept bare numbers, "route N", or ordinal words
+      if (cleaned === '1' || cleaned === 'one' || cleaned.includes('route 1') || cleaned.includes('route one') || cleaned.includes('first') || cleaned.startsWith('1') || command.includes('1')) {
         selectRouteByVoice(0);
-      } else if (command.includes('route 2') || command.includes('route two') || command.includes('second')) {
+      } else if (cleaned === '2' || cleaned === 'two' || cleaned.includes('route 2') || cleaned.includes('route two') || cleaned.includes('second') || cleaned.startsWith('2') || command.includes('2')) {
         selectRouteByVoice(1);
-      } else if (command.includes('route 3') || command.includes('route three') || command.includes('third')) {
+      } else if (cleaned === '3' || cleaned === 'three' || cleaned.includes('route 3') || cleaned.includes('route three') || cleaned.includes('third') || cleaned.startsWith('3') || command.includes('3')) {
         selectRouteByVoice(2);
       } else {
-        await speak('Please say Route 1, Route 2, or Route 3 to select.', true, true);
+        // Invalid selection
+        await speak('Invalid selection. Say 1, 2, or 3.', false, false);
       }
       return;
     }
-    
-    // Handle location input steps
-    if (voiceFlowStep === 'START_LOCATION') {
-      const location = transcript.trim();
-      setVoiceFlowData({ ...voiceFlowData, startLocation: location });
-      setVoiceFlowStep('CONFIRM_START');
-      await speak(`Your starting location is ${location}. Is this correct? Please say Yes or No.`, false, true);
+
+    // ========== STEP: FINDING_ROUTES (loading, ignore input) ==========
+    if (currentStep === 'FINDING_ROUTES') {
+      await speak('Still loading, please wait', false, false);
       return;
     }
-    
-    if (voiceFlowStep === 'DESTINATION') {
-      const location = transcript.trim();
-      setVoiceFlowData({ ...voiceFlowData, destination: location });
-      setVoiceFlowStep('CONFIRM_DESTINATION');
-      await speak(`Your destination is ${location}. Is this correct? Please say Yes or No.`, false, true);
-      return;
-    }
-    
-    if (voiceFlowStep === 'FIND_ROUTES_PROMPT') {
-      if (command.includes('find') && command.includes('route')) {
-        await speak('Finding accessible routes now. Please wait.', false, true);
-        setVoiceFlowStep('FINDING_ROUTES');
-        // Trigger route search
-        await performRouteSearch();
-      } else {
-        await speak('Please say Find Accessible Routes.', true, true);
-      }
-      return;
-    }
-    
-    // General commands
-    if (command.includes('repeat') || command.includes('again')) {
-      // Repeat last message based on current step
-      repeatCurrentStepMessage();
-    }
-  }, [voiceFlowStep, voiceFlowData, speak, selectRouteByVoice, performRouteSearch, repeatCurrentStepMessage]);
+
+    // ========== DEFAULT: If no step matched ==========
+    const stepHints = {
+      'START_LOCATION': 'Say a location name like T Nagar or Marina Beach',
+      'PICK_START_MATCH': 'Say Option 1, 2, or 3',
+      'CONFIRM_START': 'Say Yes or No',
+      'DESTINATION': 'Say your destination name',
+      'PICK_DEST_MATCH': 'Say Option 1, 2, or 3',
+      'CONFIRM_DESTINATION': 'Say Yes or No',
+      'CHOOSE_MODE': 'Say Walk or Public Transport',
+      'BOTH_LOCKED': 'Say Find Routes',
+      'SELECT_ROUTE': 'Say 1, 2, or 3 to select a route'
+    };
+    const hint = stepHints[currentStep] || 'Say Repeat';
+    await speak(hint, false, false);
+  }, [speak, selectRouteByVoice, performRouteSearch, repeatCurrentStepMessage]);
 
   // Location voice recognition for input fields
   const setupLocationVoiceRecognition = (type) => {
@@ -425,7 +830,6 @@ const Navigate = () => {
           setToLocation(location);
           speak(`Destination set to ${location}`);
         }
-        setVoiceInputMode(null);
         
         // Resume normal command listening
         setTimeout(() => {
@@ -1032,6 +1436,7 @@ const Navigate = () => {
                     readOnly
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (isVoiceMode && fromLocked) return; // Prevent editing locked field in voice mode
                       if (fromInputRef.current) {
                         const rect = fromInputRef.current.getBoundingClientRect();
                         setFromPickerPosition({
@@ -1048,16 +1453,36 @@ const Navigate = () => {
                       flex: 1,
                       boxSizing: 'border-box',
                       padding: '12px',
-                      border: `1px solid var(--border-color)`,
+                      border: `2px solid ${isVoiceMode && fromLocked ? '#10B981' : 'var(--border-color)'}`,
                       borderRadius: '8px',
                       fontSize: '14px',
-                      backgroundColor: 'var(--input-bg)',
+                      backgroundColor: isVoiceMode && fromLocked ? 'rgba(16, 185, 129, 0.08)' : 'var(--input-bg)',
                       color: 'var(--text-primary)',
                       fontFamily: 'var(--font-ui)',
+                      fontWeight: isVoiceMode && fromLocked ? '600' : '400',
                       transition: 'border-color 0.2s ease',
-                      cursor: 'pointer'
+                      cursor: isVoiceMode && fromLocked ? 'not-allowed' : 'pointer',
+                      opacity: isVoiceMode && fromLocked ? 1 : undefined
                     }}
                   />
+                  {/* Lock indicator for voice mode */}
+                  {isVoiceMode && fromLocked && (
+                    <div style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      background: '#10B981',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      minWidth: '44px',
+                      gap: '4px'
+                    }}>
+                      🔒
+                    </div>
+                  )}
                   
                   {/* Browse All Locations Button */}
                   <button
@@ -1090,40 +1515,6 @@ const Navigate = () => {
                   >
                     <FontAwesomeIcon icon={faSearch} />
                   </button>
-                  
-                  {isVoiceMode && (
-                    <button
-                      onClick={() => {
-                        setVoiceInputMode('from');
-                        speak('Please say your starting location');
-                        setFromLocation('');
-                        setTimeout(() => {
-                          setupLocationVoiceRecognition('from');
-                        }, 2000);
-                      }}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: voiceInputMode === 'from' ? 'var(--accent-color)' : 'rgba(25, 118, 210, 0.1)',
-                        color: voiceInputMode === 'from' ? 'white' : 'var(--accent-color)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '44px',
-                        transition: 'all 0.3s'
-                      }}
-                      title="Voice input for starting location"
-                    >
-                      <FontAwesomeIcon 
-                        icon={faMicrophone} 
-                        style={{
-                          animation: voiceInputMode === 'from' ? 'pulse 1s infinite' : 'none'
-                        }}
-                      />
-                    </button>
-                  )}
                 </div>
                 
                 {/* Old suggestions removed - using LocationDropdownPicker instead */}
@@ -1253,6 +1644,7 @@ const Navigate = () => {
                     readOnly
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (isVoiceMode && toLocked) return; // Prevent editing locked field in voice mode
                       if (toInputRef.current) {
                         const rect = toInputRef.current.getBoundingClientRect();
                         setToPickerPosition({
@@ -1269,16 +1661,36 @@ const Navigate = () => {
                     flex: 1,
                     boxSizing: 'border-box',
                     padding: '12px',
-                    border: `1px solid var(--border-color)`,
+                    border: `2px solid ${isVoiceMode && toLocked ? '#10B981' : 'var(--border-color)'}`,
                     borderRadius: '8px',
                     fontSize: '14px',
-                    backgroundColor: 'var(--input-bg)',
+                    backgroundColor: isVoiceMode && toLocked ? 'rgba(16, 185, 129, 0.08)' : 'var(--input-bg)',
                     color: 'var(--text-primary)',
                     fontFamily: 'var(--font-ui)',
+                    fontWeight: isVoiceMode && toLocked ? '600' : '400',
                     transition: 'border-color 0.2s ease',
-                    cursor: 'pointer'
+                    cursor: isVoiceMode && toLocked ? 'not-allowed' : 'pointer',
+                    opacity: isVoiceMode && toLocked ? 1 : undefined
                   }}
                 />
+                {/* Lock indicator for voice mode */}
+                {isVoiceMode && toLocked && (
+                  <div style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: '#10B981',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    minWidth: '44px',
+                    gap: '4px'
+                  }}>
+                    🔒
+                  </div>
+                )}
                 
                   {/* Browse All Locations Button */}
                   <button
@@ -1311,40 +1723,6 @@ const Navigate = () => {
                   >
                     <FontAwesomeIcon icon={faSearch} />
                   </button>
-                
-                {isVoiceMode && (
-                  <button
-                    onClick={() => {
-                      setVoiceInputMode('to');
-                      speak('Please say your destination');
-                      setToLocation('');
-                      setTimeout(() => {
-                        setupLocationVoiceRecognition('to');
-                      }, 2000);
-                    }}
-                    style={{
-                      padding: '12px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: voiceInputMode === 'to' ? 'var(--accent-color)' : 'rgba(25, 118, 210, 0.1)',
-                      color: voiceInputMode === 'to' ? 'white' : 'var(--accent-color)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: '44px',
-                      transition: 'all 0.3s'
-                    }}
-                    title="Voice input for destination"
-                  >
-                    <FontAwesomeIcon 
-                      icon={faMicrophone} 
-                      style={{
-                        animation: voiceInputMode === 'to' ? 'pulse 1s infinite' : 'none'
-                      }}
-                    />
-                  </button>
-                )}
               </div>
                 
                 {/* Old suggestions removed - using LocationDropdownPicker instead */}
