@@ -1,8 +1,0 @@
-Flask
-Flask-Cors
-Flask-SQLAlchemy
-psycopg2-binary
-python-dotenv
-Flask-Login
-requests
-google-auth

@@ -248,7 +248,7 @@ def create_app():
             db.session.commit()
             return {'message': 'Alert created'}
         alerts = Alert.query.order_by(Alert.created_at.desc()).all()
-        return jsonify([{'id': a.id, 'category': a.category, 'message': a.message, 'created_at': a.created_at, 'location': a.location} for a in alerts])
+        return jsonify([{'id': a.id, 'category': a.category, 'message': a.message, 'created_at': a.created_at.isoformat() if a.created_at else None, 'location': a.location} for a in alerts])
 
     # COMMUNITY ENDPOINTS
     @app.route('/api/community', methods=['GET', 'POST'])
@@ -260,7 +260,7 @@ def create_app():
             db.session.commit()
             return {'message': 'Message posted'}
         msgs = CommunityMessage.query.order_by(CommunityMessage.created_at.desc()).all()
-        return jsonify([{'id': m.id, 'user_id': m.user_id, 'message': m.message, 'image_url': m.image_url, 'created_at': m.created_at, 'type': m.type} for m in msgs])
+        return jsonify([{'id': m.id, 'user_id': m.user_id, 'message': m.message, 'image_url': m.image_url, 'created_at': m.created_at.isoformat() if m.created_at else None, 'type': m.type} for m in msgs])
 
     # ROUTES ENDPOINTS
     @app.route('/api/routes', methods=['GET', 'POST'])
@@ -272,7 +272,7 @@ def create_app():
             db.session.commit()
             return {'message': 'Route saved'}
         routes = Route.query.order_by(Route.created_at.desc()).all()
-        return jsonify([{'id': r.id, 'user_id': r.user_id, 'start_location': r.start_location, 'destination': r.destination, 'accessibility_filters': r.accessibility_filters, 'created_at': r.created_at} for r in routes])
+        return jsonify([{'id': r.id, 'user_id': r.user_id, 'start_location': r.start_location, 'destination': r.destination, 'accessibility_filters': r.accessibility_filters, 'created_at': r.created_at.isoformat() if r.created_at else None} for r in routes])
 
     # USER PREFERENCES
     @app.route('/api/user/<int:user_id>/preferences', methods=['GET', 'POST'])

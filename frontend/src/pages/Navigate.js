@@ -190,8 +190,6 @@ const Navigate = () => {
   const [toLocked, setToLocked] = useState(false);
   const voiceFlowStepRef = useRef(null);
   const voiceFlowDataRef = useRef({ startLocation: '', destination: '', selectedRouteIndex: null, pendingMatches: [] });
-  const handleVoiceFlowCommandRef = useRef(null);
-  const routesRef = useRef([]);
 
   // Data persistence functions
   const saveNavigationData = () => {
@@ -308,9 +306,7 @@ const Navigate = () => {
         
         // Setup command listener first
         setupSpeechRecognition((transcript) => {
-          if (handleVoiceFlowCommandRef.current) {
-            handleVoiceFlowCommandRef.current(transcript);
-          }
+          handleVoiceFlowCommand(transcript);
         });
         
         // Wait a bit for recognition to initialize
@@ -348,13 +344,12 @@ const Navigate = () => {
 
   // Helper functions - defined before handleVoiceFlowCommand to avoid reference errors
   const selectRouteByVoice = useCallback(async (index) => {
-    const currentRoutes = routesRef.current;
-    if (!currentRoutes[index]) {
+    if (!routes[index]) {
       await speak('Invalid selection. Say 1, 2, or 3.', true, false);
       return;
     }
     
-    const route = currentRoutes[index];
+    const route = routes[index];
     setSelectedRoute(route);
     
     // Determine travel mode for Google Maps based on route type
@@ -369,16 +364,22 @@ const Navigate = () => {
     
     const origin = encodeURIComponent(voiceFlowDataRef.current.startLocation);
     const destination = encodeURIComponent(voiceFlowDataRef.current.destination);
-    const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${travelMode}&dir_action=navigate`;
-    
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    let googleMapsUrl;
+    if (isMobile) {
+      const dirflg = travelMode === 'walking' ? 'w' : travelMode === 'driving' ? 'd' : 'r';
+      googleMapsUrl = `https://maps.google.com/maps?saddr=${origin}&daddr=${destination}&dirflg=${dirflg}`;
+    } else {
+      googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${travelMode}&dir_action=navigate`;
+    }
+    // Open BEFORE speak to preserve user-gesture context (avoids popup blocker)
+    const mapWindow = window.open(googleMapsUrl, '_blank');
+    if (!mapWindow) { window.location.href = googleMapsUrl; }
     await speak(`Opening Route ${index + 1} in Google Maps.`, false, false);
-    
-    // Open Google Maps navigation
-    window.open(googleMapsUrl, '_blank');
     
     setVoiceFlowStep(null);
     voiceFlowStepRef.current = null;
-  }, [speak]);
+  }, [routes, speak]);
   
   const performRouteSearch = useCallback(async () => {
     setIsLoading(true);
@@ -439,7 +440,6 @@ const Navigate = () => {
       ];
       
       setRoutes(mockRoutes);
-      routesRef.current = mockRoutes;
       // Store routes in voice flow data for repeat command
       setVoiceFlowData(prev => ({ ...prev, _lastRoutes: mockRoutes }));
       voiceFlowDataRef.current = { ...voiceFlowDataRef.current, _lastRoutes: mockRoutes };
@@ -740,13 +740,28 @@ const Navigate = () => {
     // ========== STEP: CHOOSE_MODE (walk or public transport) ==========
     if (currentStep === 'CHOOSE_MODE') {
       if (command.includes('walk') || command.includes('walking') || command.includes('on foot') || command.includes('by foot')) {
-        await speak('Opening walking directions in Google Maps', false, false);
-        // Build Google Maps walking directions URL with live navigation
-        const origin = encodeURIComponent(currentData.startLocation);
-        const destination = encodeURIComponent(currentData.destination);
-        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=walking&dir_action=navigate`;
-        // Open Google Maps in a new tab
-        window.open(googleMapsUrl, '_blank');
+        // Build Google Maps walking directions URL — append Chennai for better matching
+        const addChennai = (loc) => {
+          const lower = loc.toLowerCase();
+          return (lower.includes('chennai') || lower.includes('tamil nadu')) ? loc : `${loc}, Chennai, Tamil Nadu`;
+        };
+        const origin = encodeURIComponent(addChennai(currentData.startLocation));
+        const destination = encodeURIComponent(addChennai(currentData.destination));
+        const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        let googleMapsUrl;
+        if (isMobile) {
+          // Mobile: saddr/daddr format deep-links into the Google Maps app and starts navigation directly
+          googleMapsUrl = `https://maps.google.com/maps?saddr=${origin}&daddr=${destination}&dirflg=w`;
+        } else {
+          // Desktop: dir_action=navigate pre-selects the route and highlights the Start button
+          googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=walking&dir_action=navigate`;
+        }
+        // Open BEFORE speak to preserve user-gesture context (avoids popup blocker)
+        const mapWindow = window.open(googleMapsUrl, '_blank');
+        if (!mapWindow) {
+          window.location.href = googleMapsUrl;
+        }
+        await speak('Opening walking directions in Google Maps.', false, false);
         setVoiceFlowStep(null);
         voiceFlowStepRef.current = null;
         return;
@@ -821,11 +836,6 @@ const Navigate = () => {
     const hint = stepHints[currentStep] || 'Say Repeat';
     await speak(hint, false, false);
   }, [speak, selectRouteByVoice, performRouteSearch, repeatCurrentStepMessage]);
-
-  // Keep handleVoiceFlowCommand ref up to date
-  useEffect(() => {
-    handleVoiceFlowCommandRef.current = handleVoiceFlowCommand;
-  }, [handleVoiceFlowCommand]);
 
   // Location voice recognition for input fields
   const setupLocationVoiceRecognition = (type) => {

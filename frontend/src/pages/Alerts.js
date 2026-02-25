@@ -130,38 +130,32 @@ function Alerts() {
       
       // Voice commands setup for alerts
       if (isVoiceMode) {
-        const commandHandlers = {
-          'refresh|update': () => {
+        // setupSpeechRecognition expects a function, not an object
+        setupSpeechRecognition((transcript) => {
+          const cmd = transcript.toLowerCase().trim();
+          if (cmd.includes('refresh') || cmd.includes('update')) {
             speak('Refreshing alerts.', false, true);
             fetchAlerts();
             setMetroAlerts(generateMetroAlerts());
-          },
-          'repeat|again': () => {
+          } else if (cmd.includes('repeat') || cmd.includes('again')) {
             readAlerts();
-          },
-          'clear alert': () => {
+          } else if (cmd.includes('clear')) {
             speak('Clearing all alerts.', false, true);
             setAlerts([]);
-          },
-          'transport|metro|bus': () => {
+            setMetroAlerts([]);
+          } else if (cmd.includes('transport') || cmd.includes('metro') || cmd.includes('bus')) {
             speak('Transport alerts selected.', false, true);
             setCategory('transport');
-          },
-          'accessibility|access': () => {
+          } else if (cmd.includes('accessibility') || cmd.includes('access')) {
             speak('Accessibility alerts selected.', false, true);
             setCategory('accessibility');
-          },
-          'emergency': () => {
-            speak('Emergency mode activated. Calling your emergency contact now.', true, true);
-            // Handle emergency
-          },
-          'back|home': () => {
+          } else if (cmd.includes('emergency')) {
+            speak('Emergency mode activated.', true, true);
+          } else if (cmd.includes('back') || cmd.includes('home')) {
             speak('Going back.', false, true);
             navigate('/');
           }
-        };
-        
-        setupSpeechRecognition(commandHandlers);
+        });
         
         setTimeout(() => {
           readAlerts();
@@ -204,9 +198,9 @@ function Alerts() {
   };
 
   const readAlerts = async () => {
-    const accessibilityAlerts = metroAlerts.filter(alert => 
-      alert.type === 'accessibility' || alert.type === 'maintenance'
-    );
+    const accessibilityAlerts = metroAlerts
+      .filter(alert => alert.type === 'accessibility' || alert.type === 'maintenance')
+      .slice(0, 3); // Only read the first 3 alerts
     
     if (accessibilityAlerts.length === 0) {
       await speak('You have no accessibility alerts at this time.', true, true);
@@ -214,13 +208,13 @@ function Alerts() {
       return;
     }
     
-    let message = `You have ${accessibilityAlerts.length} accessibility alert${accessibilityAlerts.length > 1 ? 's' : ''}. `;
+    let message = `You have ${accessibilityAlerts.length} alert${accessibilityAlerts.length > 1 ? 's' : ''}. `;
     
     accessibilityAlerts.forEach((alert, index) => {
       message += `Alert ${index + 1}: ${alert.message} at ${alert.stations.join(' and ')} ${alert.line}. `;
     });
     
-    message += `Say Repeat to hear again. Say Clear Alerts to dismiss.`;
+    message += `Say Repeat to hear again. Say Clear Alerts to dismiss all alerts.`;
     
     await speak(message, true, true);
   };

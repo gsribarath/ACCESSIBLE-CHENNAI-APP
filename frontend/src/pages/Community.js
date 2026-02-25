@@ -188,36 +188,27 @@ function Community() {
   // Voice command setup
   useEffect(() => {
     if (isVoiceMode && speak) {
-      speak(getText('welcomeToCommunity', 'Welcome to Community page. You can say: post, filter, home, back, or help'));
+      speak('Community page. Say Police, Ambulance, or Fire for emergency services. Say Get Help for volunteer support.');
 
       if (setupSpeechRecognition) {
         setupSpeechRecognition((command) => {
-          const cleanCommand = command.toLowerCase().trim();
-          
-          if (cleanCommand.includes('home') || cleanCommand.includes(getText('home'))) {
-            speak(getText('goingHome', 'Going to Home'));
-            navigate('/');
-          } else if (cleanCommand.includes('back') || cleanCommand.includes('திरும்பு')) {
-            speak(getText('goingBack', 'Going back'));
-            navigate(-1);
-          } else if (cleanCommand.includes('post') || cleanCommand.includes('புதிய')) {
-            speak(getText('createPost', 'Creating new post'));
-            document.querySelector('textarea')?.focus();
-          } else if (cleanCommand.includes('filter') || cleanCommand.includes('வடிகட்டு')) {
-            speak(getText('changeFilter', 'Changing filter'));
-            const filterSelect = document.querySelector('select');
-            if (filterSelect) filterSelect.focus();
-          } else if (cleanCommand.includes('general') || cleanCommand.includes('பொது')) {
-            setFilterCategory('general');
-            speak(getText('showingGeneral', 'Showing general posts'));
-          } else if (cleanCommand.includes('access') || cleanCommand.includes('அணुகல்')) {
-            setFilterCategory('accessibility');
-            speak(getText('showingAccessibility', 'Showing accessibility posts'));
-          } else if (cleanCommand.includes('emergency') || cleanCommand.includes('அவசर')) {
-            setFilterCategory('emergency');
-            speak(getText('showingEmergency', 'Showing emergency posts'));
-          } else if (cleanCommand.includes('help') || cleanCommand.includes('உதவி')) {
-            speak(getText('communityHelp', 'Community page. Say: post to create new post, filter to change category, general for general posts, access for accessibility posts, emergency for emergency posts, home to go to home page, or back to go back'));
+          const cmd = command.toLowerCase().trim();
+
+          if (cmd.includes('police')) {
+            speak('Calling Police. Number is 100.', true, true);
+            window.location.href = 'tel:100';
+          } else if (cmd.includes('ambulance')) {
+            speak('Calling Ambulance. Number is 108.', true, true);
+            window.location.href = 'tel:108';
+          } else if (cmd.includes('fire')) {
+            speak('Calling Fire services. Number is 101.', true, true);
+            window.location.href = 'tel:101';
+          } else if (cmd.includes('emergency')) {
+            speak('General Emergency. Calling 112.', true, true);
+            window.location.href = 'tel:112';
+          } else if (cmd.includes('get help') || cmd.includes('volunteer') || cmd.includes('help')) {
+            speak('Connecting to Volunteer Support. Number is plus 91 98765 43210.', true, true);
+            window.location.href = 'tel:+919876543210';
           }
         });
 
