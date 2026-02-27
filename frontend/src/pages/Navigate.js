@@ -190,6 +190,7 @@ const Navigate = () => {
   const [toLocked, setToLocked] = useState(false);
   const voiceFlowStepRef = useRef(null);
   const voiceFlowDataRef = useRef({ startLocation: '', destination: '', selectedRouteIndex: null, pendingMatches: [] });
+  const handleVoiceFlowCommandRef = useRef(null);
 
   // Data persistence functions
   const saveNavigationData = () => {
@@ -306,7 +307,9 @@ const Navigate = () => {
         
         // Setup command listener first
         setupSpeechRecognition((transcript) => {
-          handleVoiceFlowCommand(transcript);
+          if (handleVoiceFlowCommandRef.current) {
+            handleVoiceFlowCommandRef.current(transcript);
+          }
         });
         
         // Wait a bit for recognition to initialize
@@ -446,11 +449,11 @@ const Navigate = () => {
       setVoiceFlowStep('SELECT_ROUTE');
       voiceFlowStepRef.current = 'SELECT_ROUTE';
       
-      // Announce routes clearly per spec
+      // Announce routes – use commas (not periods) so TTS treats each route as one flowing sentence
       let announcement = `I found ${mockRoutes.length} accessible routes. `;
-      announcement += `Route 1. ${mockRoutes[0].type}${mockRoutes[0].hasLift ? ' with lift access' : ''}. Travel time ${mockRoutes[0].estimatedTime} minutes. `;
-      announcement += `Route 2. ${mockRoutes[1].type}. Travel time ${mockRoutes[1].estimatedTime} minutes. `;
-      announcement += `Route 3. ${mockRoutes[2].type}. Travel time ${mockRoutes[2].estimatedTime} minutes. `;
+      announcement += `Route 1, ${mockRoutes[0].type}${mockRoutes[0].hasLift ? ', with lift access' : ''}, travel time ${mockRoutes[0].estimatedTime} minutes. `;
+      announcement += `Route 2, ${mockRoutes[1].type}, travel time ${mockRoutes[1].estimatedTime} minutes. `;
+      announcement += `Route 3, ${mockRoutes[2].type}, travel time ${mockRoutes[2].estimatedTime} minutes. `;
       announcement += 'Say the route number to continue.';
       
       await speak(announcement, false, false);
@@ -495,9 +498,9 @@ const Navigate = () => {
         // Repeat the full route list once
         const rts = voiceFlowDataRef.current._lastRoutes;
         if (rts && rts.length > 0) {
-          let msg = `Route 1. ${rts[0].type}${rts[0].hasLift ? ' with lift access' : ''}. Travel time ${rts[0].estimatedTime} minutes. `;
-          msg += `Route 2. ${rts[1].type}. Travel time ${rts[1].estimatedTime} minutes. `;
-          msg += `Route 3. ${rts[2].type}. Travel time ${rts[2].estimatedTime} minutes. `;
+          let msg = `Route 1, ${rts[0].type}${rts[0].hasLift ? ', with lift access' : ''}, travel time ${rts[0].estimatedTime} minutes. `;
+          msg += `Route 2, ${rts[1].type}, travel time ${rts[1].estimatedTime} minutes. `;
+          msg += `Route 3, ${rts[2].type}, travel time ${rts[2].estimatedTime} minutes. `;
           msg += 'Say the route number to continue.';
           await speak(msg, true, false);
         } else {
@@ -836,6 +839,12 @@ const Navigate = () => {
     const hint = stepHints[currentStep] || 'Say Repeat';
     await speak(hint, false, false);
   }, [speak, selectRouteByVoice, performRouteSearch, repeatCurrentStepMessage]);
+
+  // Keep handleVoiceFlowCommand ref in sync so setupSpeechRecognition callback
+  // always calls the latest version (avoids stale closure over routes state)
+  useEffect(() => {
+    handleVoiceFlowCommandRef.current = handleVoiceFlowCommand;
+  }, [handleVoiceFlowCommand]);
 
   // Location voice recognition for input fields
   const setupLocationVoiceRecognition = (type) => {

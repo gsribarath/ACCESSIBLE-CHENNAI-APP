@@ -183,7 +183,6 @@ function Settings() {
         <button
           onClick={() => {
             speak(getText('pleaseSpeak'));
-            setVoiceFeedback(getText('pleaseSpeak'));
             startListening();
           }}
           style={{

@@ -109,7 +109,7 @@ export const useVoiceInterface = () => {
 
       let idx = 0;
 
-      const done = () => {
+      let done = () => {
         if (speakTimeoutRef.current) { clearTimeout(speakTimeoutRef.current); speakTimeoutRef.current = null; }
         isSpeakingRef.current = false;
         // Restart mic after speaking
@@ -134,7 +134,29 @@ export const useVoiceInterface = () => {
         return null;
       };
 
+      // Chrome bug workaround: speechSynthesis pauses/stops firing onend
+      // after ~15s of continuous speech. Periodically nudge it to stay alive.
+      let keepAliveTimer = null;
+      const startKeepAlive = () => {
+        if (keepAliveTimer) clearInterval(keepAliveTimer);
+        keepAliveTimer = setInterval(() => {
+          if (window.speechSynthesis.speaking) {
+            window.speechSynthesis.pause();
+            window.speechSynthesis.resume();
+          }
+        }, 5000);
+      };
+      const stopKeepAlive = () => {
+        if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+      };
+
+      const origDone = done;
+      done = () => { stopKeepAlive(); origDone(); };
+
+      let uttTimeout = null;
+
       const next = () => {
+        if (uttTimeout) { clearTimeout(uttTimeout); uttTimeout = null; }
         if (idx >= sentences.length) { done(); return; }
         const s = sentences[idx].trim();
         if (!s) { idx++; next(); return; }
@@ -146,18 +168,40 @@ export const useVoiceInterface = () => {
         utt.rate = slowSpeed ? 1.0 : getVoiceSpeed();
         utt.pitch = 1.0;
         utt.volume = 1.0;
-        utt.onend = () => { idx++; setTimeout(next, 150); };
-        utt.onerror = () => { idx++; next(); };
+
+        let fired = false;
+        const advance = () => {
+          if (fired) return;
+          fired = true;
+          if (uttTimeout) { clearTimeout(uttTimeout); uttTimeout = null; }
+          idx++;
+          setTimeout(next, 150);
+        };
+
+        utt.onend = advance;
+        utt.onerror = advance;
+
         window.speechSynthesis.speak(utt);
+
+        // Per-utterance fallback: if onend never fires, move on after
+        // a generous estimate based on word count (~200ms per word + 3s buffer)
+        const wordCount = s.split(/\s+/).length;
+        const estimatedMs = Math.max(4000, wordCount * 400 + 3000);
+        uttTimeout = setTimeout(() => {
+          console.warn('[TTS] onend did not fire for:', s.substring(0, 40));
+          advance();
+        }, estimatedMs);
       };
 
+      startKeepAlive();
       next();
 
-      // Safety timeout – never leave isSpeaking stuck
+      // Safety timeout – scale with text length (min 30s, ~3s per sentence)
+      const safetyMs = Math.max(30000, sentences.length * 5000);
       speakTimeoutRef.current = setTimeout(() => {
         window.speechSynthesis.cancel();
         done();
-      }, 25000);
+      }, safetyMs);
     });
   }, [forceStartMic]);
 
