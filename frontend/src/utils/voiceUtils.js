@@ -15,12 +15,23 @@ Calling your emergency contact now.`;
 
 /**
  * Voice speed settings
+ * Normal = 1.15x (natural human speed, clear & comfortable)
  */
 export const VOICE_SPEEDS = {
-  slow: 0.95,
-  normal: 1.2,
-  fast: 1.35
+  slow: 1.0,
+  normal: 1.15,
+  fast: 1.3
 };
+
+/**
+ * Minimum confidence threshold for accepting speech input
+ */
+export const SPEECH_CONFIDENCE_THRESHOLD = 0.75;
+
+/**
+ * Silence detection timeout in ms
+ */
+export const SILENCE_TIMEOUT_MS = 1200;
 
 /**
  * Get voice speed from settings
@@ -66,16 +77,14 @@ export const useVoiceInterface = () => {
     }
   }, []);
 
-  // ── WATCHDOG: every 1.5 s, if mic should be on but isn't, restart it ──
+  // ── WATCHDOG: every 800ms, if mic should be on but isn't, restart it ──
   const startWatchdog = useCallback(() => {
     if (watchdogRef.current) clearInterval(watchdogRef.current);
     watchdogRef.current = setInterval(() => {
       if (micActiveRef.current && !isSpeakingRef.current) {
-        // Check if recognition is actually running by testing isListening state
-        // If not listening, force restart
         forceStartMic();
       }
-    }, 1500);
+    }, 800);
   }, [forceStartMic]);
 
   const stopWatchdog = useCallback(() => {
@@ -98,70 +107,98 @@ export const useVoiceInterface = () => {
       }
       setIsListening(false);
 
+      // Clear silence timer
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+
       // Cancel any pending speech
       window.speechSynthesis.cancel();
       if (speakTimeoutRef.current) clearTimeout(speakTimeoutRef.current);
 
-      // Build sentences
-      const sentences = text.split(/[.!?]+/).filter(s => s.trim());
-      // If no sentence delimiters, treat the whole text as one sentence
-      if (sentences.length === 0 && text.trim()) sentences.push(text.trim());
-
-      let idx = 0;
-
-      let done = () => {
-        if (speakTimeoutRef.current) { clearTimeout(speakTimeoutRef.current); speakTimeoutRef.current = null; }
-        isSpeakingRef.current = false;
-        // Restart mic after speaking
-        setTimeout(() => forceStartMic(), 250);
-        resolve();
-      };
-
-      // Select best Indian English voice for correct accent on words like "Routes", "Travel"
+      // Select best Indian English voice for correct accent
       const pickIndianVoice = () => {
         const voices = window.speechSynthesis.getVoices();
-        // Priority: en-IN voices first, then en-GB (closer to Indian accent), then any en
         const enIN = voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en-IN'));
         if (enIN) return enIN;
         const enINAlt = voices.find(v => v.lang.toLowerCase().includes('in') && v.lang.startsWith('en'));
         if (enINAlt) return enINAlt;
-        // Google/Microsoft Indian voices by name
         const namedIndian = voices.find(v => /indian|india|ravi|heera/i.test(v.name) && v.lang.startsWith('en'));
         if (namedIndian) return namedIndian;
-        // Fallback to en-GB (British pronunciation closer to Indian for "route" = "root")
         const enGB = voices.find(v => v.lang === 'en-GB' || v.lang.startsWith('en-GB'));
         if (enGB) return enGB;
         return null;
       };
 
-      // Chrome bug workaround: speechSynthesis pauses/stops firing onend
-      // after ~15s of continuous speech. Periodically nudge it to stay alive.
-      let keepAliveTimer = null;
-      const startKeepAlive = () => {
-        if (keepAliveTimer) clearInterval(keepAliveTimer);
-        keepAliveTimer = setInterval(() => {
-          if (window.speechSynthesis.speaking) {
-            window.speechSynthesis.pause();
-            window.speechSynthesis.resume();
+      // ── Split text into speakable chunks ──
+      // Chrome has a ~15s limit per utterance. Split longer texts at sentence boundaries.
+      // For short texts (< 200 chars), speak as one chunk for smooth delivery.
+      const buildChunks = (txt) => {
+        const cleaned = txt.trim();
+        if (!cleaned) return [];
+        if (cleaned.length < 200) return [cleaned];
+        
+        // Split on sentence boundaries but keep chunks reasonably sized
+        const parts = cleaned.split(/(?<=[.!?])\s+/).filter(s => s.trim());
+        if (parts.length <= 1) return [cleaned];
+        
+        // Merge small parts together into chunks of ~150 chars
+        const chunks = [];
+        let current = '';
+        for (const part of parts) {
+          if (current && (current.length + part.length) > 150) {
+            chunks.push(current.trim());
+            current = part;
+          } else {
+            current = current ? current + ' ' + part : part;
           }
-        }, 5000);
+        }
+        if (current.trim()) chunks.push(current.trim());
+        return chunks;
       };
-      const stopKeepAlive = () => {
+
+      const chunks = buildChunks(text);
+      if (chunks.length === 0) {
+        isSpeakingRef.current = false;
+        setTimeout(() => forceStartMic(), 100);
+        resolve();
+        return;
+      }
+
+      let chunkIdx = 0;
+      let pollTimer = null;
+      let keepAliveTimer = null;
+      let safetyTimer = null;
+
+      const cleanup = () => {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         if (keepAliveTimer) { clearInterval(keepAliveTimer); keepAliveTimer = null; }
+        if (safetyTimer) { clearTimeout(safetyTimer); safetyTimer = null; }
+        if (speakTimeoutRef.current) { clearTimeout(speakTimeoutRef.current); speakTimeoutRef.current = null; }
       };
 
-      const origDone = done;
-      done = () => { stopKeepAlive(); origDone(); };
+      const done = () => {
+        cleanup();
+        isSpeakingRef.current = false;
+        // Restart mic immediately after speaking
+        setTimeout(() => forceStartMic(), 100);
+        resolve();
+      };
 
-      let uttTimeout = null;
+      // Chrome bug workaround: periodically pause/resume to keep TTS alive
+      keepAliveTimer = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 3000);
 
-      const next = () => {
-        if (uttTimeout) { clearTimeout(uttTimeout); uttTimeout = null; }
-        if (idx >= sentences.length) { done(); return; }
-        const s = sentences[idx].trim();
-        if (!s) { idx++; next(); return; }
+      const speakChunk = () => {
+        if (chunkIdx >= chunks.length) {
+          done();
+          return;
+        }
 
-        const utt = new SpeechSynthesisUtterance(s);
+        const chunk = chunks[chunkIdx];
+        const utt = new SpeechSynthesisUtterance(chunk);
         utt.lang = 'en-IN';
         const preferredVoice = pickIndianVoice();
         if (preferredVoice) utt.voice = preferredVoice;
@@ -169,36 +206,38 @@ export const useVoiceInterface = () => {
         utt.pitch = 1.0;
         utt.volume = 1.0;
 
-        let fired = false;
-        const advance = () => {
-          if (fired) return;
-          fired = true;
-          if (uttTimeout) { clearTimeout(uttTimeout); uttTimeout = null; }
-          idx++;
-          setTimeout(next, 150);
+        let advanced = false;
+        const advanceToNext = () => {
+          if (advanced) return;
+          advanced = true;
+          if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+          chunkIdx++;
+          // Small gap between chunks for natural flow
+          setTimeout(speakChunk, 80);
         };
 
-        utt.onend = advance;
-        utt.onerror = advance;
+        // Primary: onend (works sometimes)
+        utt.onend = advanceToNext;
+        utt.onerror = advanceToNext;
 
         window.speechSynthesis.speak(utt);
 
-        // Per-utterance fallback: if onend never fires, move on after
-        // a generous estimate based on word count (~200ms per word + 3s buffer)
-        const wordCount = s.split(/\s+/).length;
-        const estimatedMs = Math.max(4000, wordCount * 400 + 3000);
-        uttTimeout = setTimeout(() => {
-          console.warn('[TTS] onend did not fire for:', s.substring(0, 40));
-          advance();
-        }, estimatedMs);
+        // Secondary: POLL speechSynthesis.speaking every 150ms
+        // This is the reliable fallback for Chrome/Edge where onend doesn't fire
+        if (pollTimer) clearInterval(pollTimer);
+        pollTimer = setInterval(() => {
+          if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+            advanceToNext();
+          }
+        }, 150);
       };
 
-      startKeepAlive();
-      next();
+      speakChunk();
 
-      // Safety timeout – scale with text length (min 30s, ~3s per sentence)
-      const safetyMs = Math.max(30000, sentences.length * 5000);
-      speakTimeoutRef.current = setTimeout(() => {
+      // Safety timeout – generous, scale with total text length
+      const totalWords = text.split(/\s+/).length;
+      const safetyMs = Math.max(15000, totalWords * 500 + 5000);
+      safetyTimer = setTimeout(() => {
         window.speechSynthesis.cancel();
         done();
       }, safetyMs);
@@ -217,7 +256,23 @@ export const useVoiceInterface = () => {
     recognitionRef.current.continuous = true;
     recognitionRef.current.lang = 'en-IN';
     recognitionRef.current.interimResults = true;
-    recognitionRef.current.maxAlternatives = 2;
+    recognitionRef.current.maxAlternatives = 3;
+
+    // Request mic with noise suppression, echo cancellation, auto gain
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 16000
+        }
+      }).then(stream => {
+        // Keep stream alive so mic stays accessible
+        recognitionRef.current._micStream = stream;
+      }).catch(() => { /* mic will still work via speech API fallback */ });
+    }
 
     recognitionRef.current.onstart = () => {
       setIsListening(true);
@@ -225,12 +280,24 @@ export const useVoiceInterface = () => {
     };
 
     recognitionRef.current.onresult = (event) => {
+      // Clear silence timer on any speech input
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null; }
+
       const last = event.results[event.results.length - 1];
       if (last.isFinal) {
+        const confidence = last[0].confidence || 0;
+        const transcript = last[0].transcript.toLowerCase().trim();
+
+        // Reject low-confidence results
+        if (confidence < SPEECH_CONFIDENCE_THRESHOLD && transcript.length < 3) {
+          setVoiceFeedback('I did not hear anything. Please speak again.');
+          return;
+        }
+
         const now = Date.now();
         if (now - lastCommandTime.current < commandDebounceMs) return;
         lastCommandTime.current = now;
-        const transcript = last[0].transcript.toLowerCase().trim();
+
         setVoiceFeedback(`Processing: "${transcript}"`);
         if (onCommand) onCommand(transcript);
       } else {
@@ -240,11 +307,12 @@ export const useVoiceInterface = () => {
 
     recognitionRef.current.onspeechend = () => {
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      // Short silence timeout - prompt user after 8s of no speech
       silenceTimerRef.current = setTimeout(() => {
         if (!isSpeakingRef.current && micActiveRef.current) {
-          speak('Still listening, go ahead', false, false);
+          speak('Still listening. Go ahead.', false, false);
         }
-      }, 12000);
+      }, 8000);
     };
 
     recognitionRef.current.onerror = (event) => {
@@ -267,9 +335,9 @@ export const useVoiceInterface = () => {
       setIsListening(false);
       // If speaking, don't restart — speak() will handle it
       if (isSpeakingRef.current) return;
-      // If mic should be on, restart immediately
+      // If mic should be on, restart IMMEDIATELY (no delay)
       if (micActiveRef.current) {
-        setTimeout(() => forceStartMic(), 300);
+        setTimeout(() => forceStartMic(), 50);
       }
     };
   }, [speak, forceStartMic, stopWatchdog]);
