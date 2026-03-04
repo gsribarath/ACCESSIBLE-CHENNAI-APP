@@ -27,23 +27,61 @@ const ModeSelection = () => {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
       
+      // Stop mic while speaking to prevent echo/feedback
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (_) {}
+      }
+      setIsListening(false);
+      
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = preferences.language === 'ta' ? 'ta-IN' : 'en-IN';
-      utterance.rate = 0.95;
-      utterance.pitch = 1.0;
+      utterance.rate = 1.15;   // Normal human speed
+      utterance.pitch = 1.0;   // Neutral professional tone
       utterance.volume = 1.0;
       
-      utterance.onend = () => {
+      // Pick best Indian English voice
+      const voices = window.speechSynthesis.getVoices();
+      const enIN = voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en-IN'));
+      if (enIN) utterance.voice = enIN;
+
+      let finished = false;
+      const finish = () => {
+        if (finished) return;
+        finished = true;
+        if (speakTimeoutRef.current) { clearTimeout(speakTimeoutRef.current); speakTimeoutRef.current = null; }
+        if (pollTimer) { clearInterval(pollTimer); }
         if (onEnd) onEnd();
       };
       
-      window.speechSynthesis.speak(utterance);
+      utterance.onend = finish;
+      utterance.onerror = finish;
       
-      // Set timeout to clear the speech instance after it finishes
+      window.speechSynthesis.speak(utterance);
+
+      // Chrome/Edge keepalive: pause/resume every 3s to prevent freezing
+      const keepAlive = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 3000);
+      
+      // POLL speechSynthesis.speaking - reliable fallback for Chrome/Edge onend bug
+      let pollTimer = setInterval(() => {
+        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+          clearInterval(keepAlive);
+          finish();
+        }
+      }, 150);
+      
+      // Safety timeout
+      const wordCount = text.split(/\s+/).length;
+      const timeoutMs = Math.max(5000, wordCount * 500 + 3000);
       speakTimeoutRef.current = setTimeout(() => {
+        clearInterval(keepAlive);
         window.speechSynthesis.cancel();
-        if (onEnd) onEnd();
-      }, 15000); // 15 seconds max for any speech
+        finish();
+      }, timeoutMs);
     } else if (onEnd) {
       onEnd();
     }
@@ -88,7 +126,21 @@ const ModeSelection = () => {
     recognitionRef.current.continuous = true;
     recognitionRef.current.lang = preferences.language === 'ta' ? 'ta-IN' : 'en-IN';
     recognitionRef.current.interimResults = true;
-    recognitionRef.current.maxAlternatives = 1;
+    recognitionRef.current.maxAlternatives = 3;
+
+    // Request mic with noise suppression & echo cancellation
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1
+        }
+      }).then(stream => {
+        recognitionRef.current._micStream = stream;
+      }).catch(() => { /* fallback - mic stays accessible via speech API */ });
+    }
 
     recognitionRef.current.onstart = () => {
       setIsListening(true);
@@ -117,30 +169,35 @@ const ModeSelection = () => {
     };
 
     recognitionRef.current.onerror = (event) => {
-      // Don't log network errors to console to avoid noisy output
-      if (event.error !== 'network' && event.error !== 'aborted') {
-        console.error('Speech recognition error:', event.error);
-      }
+      // Silently handle expected errors during speech/background
+      if (event.error === 'aborted') return;
       
       if (event.error === 'no-speech' || event.error === 'network') {
-        // Silently restart for no-speech and network errors
+        // Auto-restart silently
+        if (!hasRedirectedRef.current) {
+          setTimeout(() => startListening(), 200);
+        }
+      } else if (event.error === 'audio-capture') {
+        setFeedbackMessage('No microphone detected. Please check your microphone.');
+        // Still try to restart after a moment
+        if (!hasRedirectedRef.current) {
+          setTimeout(() => startListening(), 2000);
+        }
+      } else if (event.error === 'not-allowed') {
+        setFeedbackMessage('Microphone access denied. Please allow microphone in browser settings.');
+      } else {
+        // Unknown error - try restart
         if (!hasRedirectedRef.current) {
           setTimeout(() => startListening(), 500);
-        }
-      } else if (event.error !== 'aborted') {
-        setIsListening(false);
-        // Try to restart after other errors
-        if (!hasRedirectedRef.current) {
-          setTimeout(() => startListening(), 1000);
         }
       }
     };
 
     recognitionRef.current.onend = () => {
       setIsListening(false);
-      // Auto-restart if not redirected
+      // ALWAYS auto-restart if not redirected - mic must NEVER die
       if (!hasRedirectedRef.current && !isProcessing) {
-        setTimeout(() => startListening(), 300);
+        setTimeout(() => startListening(), 50);
       }
     };
   }, [preferences.language, processVoiceCommand, isProcessing]);
@@ -225,14 +282,14 @@ const ModeSelection = () => {
       setSpokenText(spokenTranscript);
     }
     
-    // Quick feedback
+    // Quick feedback - SHORT confirmation
     const feedbackMsg = mode === 'voice' 
-      ? 'Voice Mode selected. Redirecting...' 
-      : 'Normal Mode selected. Redirecting...';
+      ? 'Voice Mode. Redirecting.' 
+      : 'Normal Mode. Redirecting.';
     setFeedbackMessage(feedbackMsg);
     
-    // Speak confirmation briefly
-    speak(mode === 'voice' ? 'Voice Mode activated' : 'Normal Mode activated');
+    // Short confirmation speech
+    speak(mode === 'voice' ? 'Voice Mode activated.' : 'Normal Mode activated.');
     
     setIsSaving(true);
     
@@ -360,7 +417,7 @@ const ModeSelection = () => {
             color: isListening ? '#4CAF50' : 'var(--text-secondary)',
             fontWeight: '500'
           }}>
-            {isListening ? 'Voice recognition ready' : 'Voice recognition ready'}
+            {isListening ? 'Voice recognition active' : 'Tap mic to start'}
           </span>
         </div>
         
@@ -500,7 +557,7 @@ const ModeSelection = () => {
             color: spokenText ? 'var(--accent-color)' : 'var(--text-secondary)',
             fontStyle: spokenText ? 'normal' : 'italic'
           }}>
-            {spokenText || (isListening ? 'Listening...' : 'Listening...')}
+            {spokenText || (isListening ? 'Listening...' : 'Tap the mic button or say your choice')}
           </span>
         </div>
         
