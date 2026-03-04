@@ -890,7 +890,13 @@ const Navigate = () => {
               setIsNavigating(false);
               if ('speechSynthesis' in window) {
                 const utterance = new SpeechSynthesisUtterance('Navigation complete! You have arrived at your destination.');
+                utterance.lang = 'en-IN';
+                utterance.rate = 1.15;
+                utterance.pitch = 1.0;
                 speechSynthesis.speak(utterance);
+                // Chrome keepalive
+                const _ka = setInterval(() => { if (speechSynthesis.speaking) { speechSynthesis.pause(); speechSynthesis.resume(); } }, 3000);
+                const _poll = setInterval(() => { if (!speechSynthesis.speaking && !speechSynthesis.pending) { clearInterval(_ka); clearInterval(_poll); } }, 150);
               }
               return 100;
             }
@@ -908,8 +914,13 @@ const Navigate = () => {
         setCurrentStep(stepProgress);
         if (isNavigating && 'speechSynthesis' in window) {
           const utterance = new SpeechSynthesisUtterance(route.steps[stepProgress]);
-          utterance.rate = 0.8;
+          utterance.lang = 'en-IN';
+          utterance.rate = 1.15;
+          utterance.pitch = 1.0;
           speechSynthesis.speak(utterance);
+          // Chrome keepalive
+          const _ka2 = setInterval(() => { if (speechSynthesis.speaking) { speechSynthesis.pause(); speechSynthesis.resume(); } }, 3000);
+          const _poll2 = setInterval(() => { if (!speechSynthesis.speaking && !speechSynthesis.pending) { clearInterval(_ka2); clearInterval(_poll2); } }, 150);
         }
       }
     }, [progress, route.steps, isNavigating, currentStep]);
@@ -932,7 +943,13 @@ const Navigate = () => {
       setCurrentStep(0);
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(`Starting navigation. ${route.mode} route to your destination.`);
+        utterance.lang = 'en-IN';
+        utterance.rate = 1.15;
+        utterance.pitch = 1.0;
         speechSynthesis.speak(utterance);
+        // Chrome keepalive
+        const _ka3 = setInterval(() => { if (speechSynthesis.speaking) { speechSynthesis.pause(); speechSynthesis.resume(); } }, 3000);
+        const _poll3 = setInterval(() => { if (!speechSynthesis.speaking && !speechSynthesis.pending) { clearInterval(_ka3); clearInterval(_poll3); } }, 150);
       }
     };
     
