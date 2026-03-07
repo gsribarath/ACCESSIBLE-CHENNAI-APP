@@ -315,8 +315,8 @@ const Navigate = () => {
         // Wait a bit for recognition to initialize
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Welcome and ask for starting location - clear and natural
-        await speak('Where are you starting from?', true, false);
+        // Welcome message with introduction before asking for location
+        await speak('Starting voice-guided navigation. Where are you starting from?', true, false);
         
         setVoiceFlowStep('START_LOCATION');
         voiceFlowStepRef.current = 'START_LOCATION';
@@ -722,6 +722,15 @@ const Navigate = () => {
     if (currentStep === 'CONFIRM_DESTINATION') {
       if (command.includes('yes') || command.includes('correct') || command.includes('confirm') || command.includes('right') || command.includes('yeah') || command.includes('yep') || command.includes('sure') || command.includes('okay') || command.includes('ok')) {
         const loc = currentData.destination;
+        // Check if source and destination are the same
+        if (currentData.startLocation && loc && currentData.startLocation.trim().toLowerCase() === loc.trim().toLowerCase()) {
+          await speak('Source and destination cannot be the same. Please choose a different destination.', false, false);
+          setVoiceFlowStep('DESTINATION');
+          voiceFlowStepRef.current = 'DESTINATION';
+          setVoiceFlowData(prev => ({ ...prev, destination: '' }));
+          voiceFlowDataRef.current = { ...voiceFlowDataRef.current, destination: '' };
+          return;
+        }
         setToLocation(loc);
         setToLocked(true);
         await speak(`Got it, ${loc}, walk or public transport?`, false, false);
@@ -1174,6 +1183,10 @@ const Navigate = () => {
   const handleSearch = async () => {
     if (!fromLocation || !toLocation) {
       setError(getText('pleaseEnterBothLocations'));
+      return;
+    }
+    if (fromLocation.trim().toLowerCase() === toLocation.trim().toLowerCase()) {
+      setError('Source and destination cannot be the same. Please choose different locations.');
       return;
     }
 
