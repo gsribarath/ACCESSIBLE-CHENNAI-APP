@@ -170,8 +170,14 @@ export const PreferencesProvider = ({ children }) => {
           setTimeout(() => {
             if (window.speechSynthesis) {
               const utterance = new SpeechSynthesisUtterance(text.trim());
-              utterance.rate = 0.8;
-              utterance.volume = 0.7;
+              utterance.lang = 'en-IN';
+              utterance.rate = 1.15;   // Normal human speed
+              utterance.pitch = 1.0;
+              utterance.volume = 0.8;
+              // Pick Indian English voice
+              const voices = window.speechSynthesis.getVoices();
+              const enIN = voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en-IN'));
+              if (enIN) utterance.voice = enIN;
               window.speechSynthesis.speak(utterance);
             }
           }, 100);

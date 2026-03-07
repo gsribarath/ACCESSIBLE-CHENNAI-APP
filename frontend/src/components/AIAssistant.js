@@ -197,13 +197,47 @@ function AIAssistant({ isOpen = false, onClose = () => {} }) {
   const speakText = (text) => {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text.replace(/[*#•]/g, ''));
+      const cleanText = text.replace(/[*#•]/g, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
       utterance.lang = 'en-IN';
-      utterance.rate = 0.85;
-      utterance.pitch = 1.0;
+      utterance.rate = 1.15;   // Normal human speed
+      utterance.pitch = 1.0;   // Neutral professional tone
+      utterance.volume = 1.0;
+      
+      // Pick best Indian English voice
+      const voices = window.speechSynthesis.getVoices();
+      const enIN = voices.find(v => v.lang === 'en-IN' || v.lang.startsWith('en-IN'));
+      if (enIN) utterance.voice = enIN;
+      
       utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
+      
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        setIsSpeaking(false);
+        if (pollTimer) clearInterval(pollTimer);
+        if (keepAlive) clearInterval(keepAlive);
+      };
+      
+      utterance.onend = finish;
+      utterance.onerror = finish;
       window.speechSynthesis.speak(utterance);
+      
+      // Chrome/Edge keepalive to prevent TTS freezing
+      const keepAlive = setInterval(() => {
+        if (window.speechSynthesis.speaking) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 3000);
+      
+      // Poll speechSynthesis.speaking - reliable fallback for onend bug
+      const pollTimer = setInterval(() => {
+        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+          finish();
+        }
+      }, 150);
     }
   };
   
@@ -220,10 +254,17 @@ function AIAssistant({ isOpen = false, onClose = () => {} }) {
       return;
     }
     
+    // Stop any ongoing speech immediately when user wants to talk (interruption)
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+    
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognitionRef.current = new SpeechRecognition();
     recognitionRef.current.lang = 'en-IN';
     recognitionRef.current.interimResults = false;
+    recognitionRef.current.maxAlternatives = 3;
     
     recognitionRef.current.onstart = () => setIsListening(true);
     recognitionRef.current.onend = () => setIsListening(false);
@@ -231,8 +272,8 @@ function AIAssistant({ isOpen = false, onClose = () => {} }) {
     recognitionRef.current.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
       setInputValue(transcript);
-      // Auto-send after voice input
-      setTimeout(() => handleSendMessage(transcript), 500);
+      // Auto-send immediately after voice input
+      setTimeout(() => handleSendMessage(transcript), 200);
     };
     
     recognitionRef.current.onerror = () => setIsListening(false);
